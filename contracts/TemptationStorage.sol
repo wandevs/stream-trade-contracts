@@ -9,15 +9,33 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 
 contract TemptationStorage {
-    using SafeERC20 for ERC20;
-    ERC20 public erc20Token;
-
     using SafeMath for uint256;
 
-    EnumerableSet.AddressSet stakers;
+    struct UserInfo {
+        address asset;
+        uint amount;
+        bool streaming;
+        uint startTime;
+        address streamTarget; // if == address(this) is swap otherwise is send
+        uint streamRate; // wei per second
+        address tradeTo; // wanswap trade to token
+    }
 
-    // user => amount
-    mapping(address => uint) public stakersAmount;
+    struct AssetInfo {
 
-    uint public totalStaked;
+    }
+
+
+    EnumerableSet.AddressSet users;
+
+    EnumerableSet.AddressSet depositAssets;
+
+    // user => assets list
+    mapping(address => EnumerableSet.UintSet) userSessions;
+
+    // user => sessionId => UserInfo
+    mapping(address => mapping(uint => UserInfo)) userAssetInfo;
+
+    // asset address => asset info
+    mapping(address => AssetInfo) assetInfo;
 }
