@@ -163,7 +163,7 @@ contract StreamDelegate is
             IWWAN(wwan).withdraw(amount);
             msg.sender.transfer(amount);
         } else {
-            IERC20(token).safeTransferFrom(address(this), user, amount);
+            IERC20(token).safeTransfer(user, amount);
         }
         emit Withdraw(user, token, amount);
     }
@@ -209,8 +209,9 @@ contract StreamDelegate is
         uint sessionId = uint(keccak256(abi.encode(user, to, token)));
         SessionInfo storage sInfo = sessionInfo[sessionId];
         sInfo.enable = false;
+        sInfo.updateTime = block.timestamp;
         if (!sInfo.dead) {
-            IERC20(sInfo.collateralAsset).safeTransferFrom(address(this), user, sInfo.collateralAmount);
+            IERC20(sInfo.collateralAsset).safeTransfer(user, sInfo.collateralAmount);
             delete sInfo.collateralAmount;
             delete sInfo.collateralAsset;
         }
@@ -228,7 +229,7 @@ contract StreamDelegate is
         userAssetSessions[user][token].remove(sessionId);
         SessionInfo storage sInfo = sessionInfo[sessionId];
         if (!sInfo.dead) {
-            IERC20(sInfo.collateralAsset).safeTransferFrom(address(this), user, sInfo.collateralAmount);
+            IERC20(sInfo.collateralAsset).safeTransfer(user, sInfo.collateralAmount);
             delete sInfo.collateralAmount;
             delete sInfo.collateralAsset;
         }
@@ -239,5 +240,39 @@ contract StreamDelegate is
     function pendingAmount(uint sessionId) public view returns (uint) {
         SessionInfo storage sInfo = sessionInfo[sessionId];
         return sInfo.streamRate.mul(block.timestamp - sInfo.updateTime);
+    }
+
+    function getUserRealTimeAsset(address _user, address _token) public view returns (uint) {
+        address asset = _token;
+        if (asset == address(0)) { // token is wan
+            asset = wwan;
+        }
+
+        UserInfo storage ui = userInfo[_user][asset];
+        uint amount = ui.amount;
+        uint sessionCount = userAssetSessions[_user][asset].length();
+        uint pending;
+        uint sessionId;
+        uint m;
+        for (m=0; m<sessionCount; m++) {
+            sessionId = userAssetSessions[_user][asset].at(m);
+            SessionInfo storage sInfo = sessionInfo[sessionId];
+            if (sInfo.enable) {
+                pending = pendingAmount(sessionId);
+                if (_user == sInfo.sender) {
+                    if (amount > pending) {
+                        amount = amount.sub(pending);
+                    }
+                } else {
+                    UserInfo storage senderInfo = userInfo[sInfo.sender][asset];
+                    if (senderInfo.amount > pending) {
+                        amount = amount.add(pending);
+                    } else {
+                        amount = amount.add(senderInfo.amount);
+                    }
+                }
+            }
+        }
+        return amount;
     }
 }
