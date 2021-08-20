@@ -195,6 +195,7 @@ contract StreamDelegate is
 
         userAssetSessions[user][token].add(sessionId);
         userAssetSessions[to][token].add(sessionId);
+        userAssets[to].add(token);
 
         emit StartStream(user, to, _token, streamRate);
     }

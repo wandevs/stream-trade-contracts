@@ -32,7 +32,7 @@ contract StreamStorage {
     mapping(address => EnumerableSet.AddressSet) userAssets;
 
     // user => asset => UserInfo
-    mapping(address => mapping(address => UserInfo)) userInfo;
+    mapping(address => mapping(address => UserInfo)) public userInfo;
 
     // user => asset => sessionId list
     mapping(address => mapping(address => EnumerableSet.UintSet)) userAssetSessions;
