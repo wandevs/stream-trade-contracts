@@ -16,6 +16,8 @@ contract StreamDelegate is
 {
     using SafeERC20 for IERC20;
 
+    uint public constant COLLATERAL_WASP = 100 ether;
+
     event Deposit(address indexed user, address indexed token, uint amount);
 
     event Withdraw(address indexed user, address indexed token, uint amount);
@@ -26,16 +28,20 @@ contract StreamDelegate is
 
     event RemoveStream(address indexed from, address indexed to, address indexed token, uint streamRate);
 
+    event DepositExhausted(address indexed from, address indexed token, uint indexed sessionId);
+
     modifier onlyAdmin() {
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "no access");
         _;
     }
 
-    function initialize(address _admin, address _wwan)
+    function initialize(address _admin, address _wwan, address _wasp)
         external
         initializer
     {
         _setupRole(DEFAULT_ADMIN_ROLE, _admin);
+        wwan = _wwan;
+        wasp = _wasp;
     }
 
     receive() external payable {
@@ -58,33 +64,80 @@ contract StreamDelegate is
                 sessionId = userAssetSessions[_user][asset].at(m);
                 SessionInfo storage sInfo = sessionInfo[sessionId];
                 if (sInfo.enable) {
-                    UserInfo storage si = userInfo[sInfo.sender][asset];
-                    UserInfo storage ri = userInfo[sInfo.reciever][asset];
+                    require(sInfo.asset == asset, "session asset not correct");
+                    UserInfo storage senderInfo = userInfo[sInfo.sender][asset];
+                    UserInfo storage receiverInfo = userInfo[sInfo.receiver][asset];
                     pending = pendingAmount(sessionId);
-                    if (_user == sInfo.sender && ui.amount >= pending) {
-
+                    if (senderInfo.amount >= pending) {
+                        senderInfo.amount = senderInfo.amount.sub(pending);
+                    } else {
+                        pending = senderInfo.amount;
+                        senderInfo.amount = 0;
+                        // run out of balance, Confiscate collateral
+                        sInfo.dead = true;
+                        sInfo.enable = false;
+                        delete sInfo.collateralAmount;
+                        delete sInfo.collateralAsset;
+                        emit DepositExhausted(sInfo.sender, sInfo.asset, sessionId);
                     }
+                    sInfo.paid = sInfo.paid.add(pending);
+                    receiverInfo.amount = receiverInfo.amount.add(pending);
+                    sInfo.updateTime = block.timestamp;
                 }
             }
         }
     }
 
     function healthCheck(uint sessionId) public view returns(bool) {
-        return true;
+        SessionInfo storage sInfo = sessionInfo[sessionId];
+        address asset = sInfo.asset;
+        if (sInfo.enable) {
+            UserInfo storage senderInfo = userInfo[sInfo.sender][asset];
+            uint pending = pendingAmount(sessionId);
+            if (senderInfo.amount >= pending) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+        return false;
     }
 
-    function deposit(address _token, uint256 _amount) public {
+    function getUserAssets(address _user) public view returns(address[] memory assets, uint[] memory amounts) {
+        uint length = userAssets[_user].length();
+        assets = new address[](length);
+        amounts = new uint[](length);
+        uint i;
+        for (i=0; i<length; i++) {
+            assets[i] = userAssets[_user].at(i);
+            amounts[i] = userInfo[_user][assets[i]].amount;
+        }
+    }
+
+    function getUserAssetSessions(address _user, address _token) public view returns(uint[] memory sessionIds) {
+        address token = _token;
+        if (token == address(0)) {
+            token = wwan;
+        }
+        uint length = userAssetSessions[_user][token].length();
+        sessionIds = new uint[](length);
+        uint i;
+        for (i=0; i<length; i++) {
+            sessionIds[i] = userAssetSessions[_user][token].at(i);
+        }
+    }
+
+    function deposit(address _token, uint256 _amount) public payable {
         address token = _token;
         uint256 amount = _amount;
-        uint256 user = _msgSender();
+        address user = _msgSender();
         if (token == address(0)) { // token is wan
-            IWWAN(wwan).deposit{value: amounts[0]}();
-            token = wwan;
             amount = msg.value;
+            token = wwan;
+            IWWAN(wwan).deposit{value: amount}();
         } else {
             IERC20(token).safeTransferFrom(user, address(this), amount);
         }
-
         update(user);
         userAssets[user].add(token);
         userInfo[user][token].amount = userInfo[user][token].amount.add(amount);
@@ -93,7 +146,7 @@ contract StreamDelegate is
 
     function withdraw(address _token, uint256 amount) public {
         address token = _token;
-        uint256 user = _msgSender();
+        address user = _msgSender();
         update(user);
         if (token == address(0)) { // token is wan
             token = wwan;
@@ -117,7 +170,11 @@ contract StreamDelegate is
 
     function startStream(address _token, uint256 streamRate, address to) public {
         address token = _token;
-        uint256 user = _msgSender();
+        address user = _msgSender();
+
+        // each session need deposit 100 WASP for collateral
+        IERC20(wasp).safeTransferFrom(user, address(this), COLLATERAL_WASP);
+
         update(user);
         if (token == address(0)) { // token is wan
             token = wwan;
@@ -127,11 +184,14 @@ contract StreamDelegate is
         uint sessionId = uint(keccak256(abi.encode(user, to, token)));
         SessionInfo storage sInfo = sessionInfo[sessionId];
         sInfo.sender = user;
-        sInfo.reciever = to;
+        sInfo.receiver = to;
         sInfo.asset = token;
-        sInfo.startTime = block.timestamp;
+        sInfo.updateTime = block.timestamp;
         sInfo.streamRate = streamRate;
         sInfo.enable = true;
+        //collateral 
+        sInfo.collateralAsset = wasp;
+        sInfo.collateralAmount = COLLATERAL_WASP;
 
         userAssetSessions[user][token].add(sessionId);
         userAssetSessions[to][token].add(sessionId);
@@ -140,30 +200,39 @@ contract StreamDelegate is
     }
 
     function stopStream(address _token, address to) public {
-        update();
         address token = _token;
-        uint256 user = _msgSender();
+        address user = _msgSender();
+        update(user);
         if (token == address(0)) { // token is wan
             token = wwan;
         }
         uint sessionId = uint(keccak256(abi.encode(user, to, token)));
         SessionInfo storage sInfo = sessionInfo[sessionId];
         sInfo.enable = false;
+        if (!sInfo.dead) {
+            IERC20(sInfo.collateralAsset).safeTransferFrom(address(this), user, sInfo.collateralAmount);
+            delete sInfo.collateralAmount;
+            delete sInfo.collateralAsset;
+        }
 
         emit StopStream(user, to, _token, 0);
     }
 
-    function removeStream(address _token, address to) public {
-        update();
+    function removeStream(address user, address _token, address to) public onlyAdmin {
+        update(user);
         address token = _token;
-        uint256 user = _msgSender();
         if (token == address(0)) { // token is wan
             token = wwan;
         }
         uint sessionId = uint(keccak256(abi.encode(user, to, token)));
         userAssetSessions[user][token].remove(sessionId);
+        SessionInfo storage sInfo = sessionInfo[sessionId];
+        if (!sInfo.dead) {
+            IERC20(sInfo.collateralAsset).safeTransferFrom(address(this), user, sInfo.collateralAmount);
+            delete sInfo.collateralAmount;
+            delete sInfo.collateralAsset;
+        }
         delete sessionInfo[sessionId];
-
         emit RemoveStream(user, to, _token, 0);
     }
 

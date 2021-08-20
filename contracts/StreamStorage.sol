@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 
 contract StreamStorage {
     using SafeMath for uint256;
+    using EnumerableSet for EnumerableSet.AddressSet;
+    using EnumerableSet for EnumerableSet.UintSet;
 
     struct UserInfo {
         uint amount;
@@ -15,12 +17,15 @@ contract StreamStorage {
 
     struct SessionInfo {
         address sender;
-        address reciever;
+        address receiver;
         address asset;
         uint updateTime;
         uint streamRate;
         uint paid;
+        uint collateralAmount;
+        address collateralAsset;
         bool enable;
+        bool dead;
     }
 
     // user => assets
@@ -33,8 +38,11 @@ contract StreamStorage {
     mapping(address => mapping(address => EnumerableSet.UintSet)) userAssetSessions;
 
     // sessionId => sessionInfo
-    mapping(uint => SessionInfo) sessionInfo;
+    mapping(uint => SessionInfo) public sessionInfo;
 
     // Wrapped WAN token address
     address public wwan;
+
+    // collateral WASP token
+    address public wasp;
 }
