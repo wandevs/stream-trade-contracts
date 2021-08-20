@@ -5,6 +5,7 @@
   "license": "MIT",
   "dependencies": {
     "@openzeppelin/contracts": "3.4.1",
+    "@openzeppelin/test-helpers": "^0.5.13",
     "@truffle/hdwallet-provider": "^1.4.2",
     "solidity-coverage": "^0.7.16",
     "truffle": "^5.4.2"

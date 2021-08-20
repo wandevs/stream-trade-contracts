@@ -30,6 +30,8 @@ contract StreamDelegate is
 
     event DepositExhausted(address indexed from, address indexed token, uint indexed sessionId);
 
+    event Transfer(address indexed from, address indexed to, uint amount);
+
     modifier onlyAdmin() {
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "no access");
         _;
@@ -218,6 +220,22 @@ contract StreamDelegate is
         }
 
         emit StopStream(user, to, _token, 0);
+    }
+
+    function transferAsset(address _token, address to, uint amount) public {
+        address asset = _token;
+        if (asset == address(0)) { // token is wan
+            asset = wwan;
+        }
+
+        address from = _msgSender();
+        update(from);
+        UserInfo storage uf = userInfo[from][asset];
+        require(amount <= uf.amount, "User asset not enough");
+        UserInfo storage ut = userInfo[to][asset];
+        uf.amount = uf.amount.sub(amount);
+        ut.amount = ut.amount.add(amount);
+        emit Transfer(from, to, amount);
     }
 
     function removeStream(address user, address _token, address to) public onlyAdmin {
