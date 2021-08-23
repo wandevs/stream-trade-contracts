@@ -19,6 +19,8 @@ contract StreamStorage {
         address sender;
         address receiver;
         address asset;
+        uint startTime;
+        uint endTime;
         uint updateTime;
         uint streamRate;
         uint paid;

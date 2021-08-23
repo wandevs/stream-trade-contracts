@@ -22,15 +22,17 @@ contract StreamDelegate is
 
     event Withdraw(address indexed user, address indexed token, uint amount);
 
-    event StartStream(address indexed from, address indexed to, address indexed token, uint streamRate);
+    event StartStream(address indexed from, address indexed to, address indexed token, uint amount, uint period);
 
-    event StopStream(address indexed from, address indexed to, address indexed token, uint streamRate);
+    event StopStream(address indexed from, address indexed to, address indexed token);
 
-    event RemoveStream(address indexed from, address indexed to, address indexed token, uint streamRate);
+    event RemoveStream(address indexed from, address indexed to, address indexed token);
 
     event DepositExhausted(address indexed from, address indexed token, uint indexed sessionId);
 
     event Transfer(address indexed from, address indexed to, uint amount);
+
+    event TimeOut(address indexed from, address indexed to, uint indexed sessionId);
 
     modifier onlyAdmin() {
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "no access");
@@ -70,7 +72,11 @@ contract StreamDelegate is
                     UserInfo storage senderInfo = userInfo[sInfo.sender][asset];
                     UserInfo storage receiverInfo = userInfo[sInfo.receiver][asset];
                     pending = pendingAmount(sessionId);
-                    if (senderInfo.amount >= pending) {
+                    if (pending == 0) {
+                        // end time arrive
+                        sInfo.enable = false;
+                        emit TimeOut(sInfo.sender, sInfo.receiver, sessionId);
+                    } else if (senderInfo.amount >= pending) {
                         senderInfo.amount = senderInfo.amount.sub(pending);
                     } else {
                         pending = senderInfo.amount;
@@ -84,7 +90,11 @@ contract StreamDelegate is
                     }
                     sInfo.paid = sInfo.paid.add(pending);
                     receiverInfo.amount = receiverInfo.amount.add(pending);
-                    sInfo.updateTime = block.timestamp;
+                    uint updateTime = block.timestamp;
+                    if (updateTime >= sInfo.endTime) {
+                        updateTime = sInfo.endTime;
+                    }
+                    sInfo.updateTime = updateTime;
                 }
             }
         }
@@ -170,17 +180,21 @@ contract StreamDelegate is
         emit Withdraw(user, token, amount);
     }
 
-    function startStream(address _token, uint256 streamRate, address to) public {
+    function startStream(address _token, uint256 amount, address to, uint period) public {
         address token = _token;
         address user = _msgSender();
-
-        // each session need deposit 100 WASP for collateral
-        IERC20(wasp).safeTransferFrom(user, address(this), COLLATERAL_WASP);
-
-        update(user);
         if (token == address(0)) { // token is wan
             token = wwan;
         }
+
+        require(period >= 3600 && period <= (3600*24*365), "expired out of range");
+        require(amount.div(period) > 0, "amount too little");
+
+        // each session need deposit some WASP for collateral
+        uint collateralAmount = takeCollateral(token, amount, period);
+
+        update(user);
+        
         uint currentAmount = userInfo[user][token].amount;
         require(currentAmount > 0, "deposit not enough");
         uint sessionId = uint(keccak256(abi.encode(user, to, token)));
@@ -188,18 +202,29 @@ contract StreamDelegate is
         sInfo.sender = user;
         sInfo.receiver = to;
         sInfo.asset = token;
+        sInfo.startTime = block.timestamp;
         sInfo.updateTime = block.timestamp;
-        sInfo.streamRate = streamRate;
+        sInfo.endTime = block.timestamp + period;
+        sInfo.streamRate = amount.div(period);
         sInfo.enable = true;
         //collateral 
         sInfo.collateralAsset = wasp;
-        sInfo.collateralAmount = COLLATERAL_WASP;
+        sInfo.collateralAmount = collateralAmount;
 
         userAssetSessions[user][token].add(sessionId);
         userAssetSessions[to][token].add(sessionId);
         userAssets[to].add(token);
 
-        emit StartStream(user, to, _token, streamRate);
+        emit StartStream(user, to, _token, amount, period);
+    }
+
+    function takeCollateral(address _token, uint256 amount, uint expired) internal returns(uint) {
+        // get price
+        // 1% collateral
+        // TODO: 
+        IERC20(wasp).safeTransferFrom(user, address(this), COLLATERAL_WASP);
+
+        return COLLATERAL_WASP;
     }
 
     function stopStream(address _token, address to) public {
@@ -219,7 +244,7 @@ contract StreamDelegate is
             delete sInfo.collateralAsset;
         }
 
-        emit StopStream(user, to, _token, 0);
+        emit StopStream(user, to, _token);
     }
 
     function transferAsset(address _token, address to, uint amount) public {
@@ -253,12 +278,20 @@ contract StreamDelegate is
             delete sInfo.collateralAsset;
         }
         delete sessionInfo[sessionId];
-        emit RemoveStream(user, to, _token, 0);
+        emit RemoveStream(user, to, _token);
     }
 
     function pendingAmount(uint sessionId) public view returns (uint) {
         SessionInfo storage sInfo = sessionInfo[sessionId];
-        return sInfo.streamRate.mul(block.timestamp - sInfo.updateTime);
+        uint calcTime = block.timestamp;
+        if (calcTime >= sInfo.endTime) {
+            calcTime = sInfo.endTime;
+        }
+
+        if (calcTime > sInfo.updateTime) {
+            return sInfo.streamRate.mul(calcTime - sInfo.updateTime);
+        }
+        return 0;
     }
 
     function getUserRealTimeAsset(address _user, address _token) public view returns (uint) {
