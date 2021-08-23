@@ -77,7 +77,7 @@ contract("StreamDelegate", accounts => {
     assert.strictEqual((await token.balanceOf(accounts[0])).toString(), '0', 6);
     assert.strictEqual((await delegate.getUserRealTimeAsset(accounts[0], token.address)).toString(), '1000000', 4.1);
 
-    let ret = await delegate.startStream(token.address, 1, accounts[1], {from: accounts[0]});
+    let ret = await delegate.startStream(token.address, 3600*10, accounts[1], 3600*10, {from: accounts[0]});
     console.log('startStream gasUsed', ret.receipt.gasUsed);
     assert.strictEqual((await delegate.getUserRealTimeAsset(accounts[1], token.address)).toString(), '0', 4.1);
     assert.strictEqual((await wasp.balanceOf(accounts[0])).toString(), '9900000000000000000000', 6);
@@ -114,6 +114,27 @@ contract("StreamDelegate", accounts => {
   it("should success stop", async () => {
     await start();
     await stop();
+  });
+
+  it("should success transfer", async () => {
+    await delegate.deposit(token.address, 1000000, {from: accounts[0]});
+    assert.strictEqual((await token.balanceOf(accounts[0])).toString(), '0', 6);
+    assert.strictEqual((await delegate.getUserRealTimeAsset(accounts[0], token.address)).toString(), '1000000', 4.1);
+    await delegate.transferAsset(token.address, accounts[1], 100000);
+    assert.strictEqual((await delegate.getUserRealTimeAsset(accounts[0], token.address)).toString(), '900000', 4.1);
+    assert.strictEqual((await delegate.getUserRealTimeAsset(accounts[1], token.address)).toString(), '100000', 4.1);
+    await delegate.withdraw(token.address, 100000, {from: accounts[1]});
+    assert.strictEqual((await token.balanceOf(accounts[1])).toString(), '1100000', 6);
+
+  });
+
+  it.only("should success timeout", async () => {
+    await start();
+    time.increase(3600*10);
+    time.increase(3600*10);
+    assert.strictEqual((await delegate.getUserRealTimeAsset(accounts[1], token.address)).toString(), '36000', 4.1);
+    await delegate.withdraw(token.address, 36000, {from: accounts[1]});
+    assert.strictEqual((await token.balanceOf(accounts[1])).toString(), '1036000', 6);
   });
 });
 
