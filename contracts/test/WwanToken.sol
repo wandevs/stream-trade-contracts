@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.6.12;
 
 contract WwanToken {
@@ -12,12 +14,6 @@ contract WwanToken {
 
     mapping (address => uint)                       public  balanceOf;
     mapping (address => mapping (address => uint))  public  allowance;
-
-
-    constructor() public
-    {
-        balanceOf[msg.sender] = 1560000000 * 10**18;
-    }
 
     function deposit() public payable {
         balanceOf[msg.sender] += msg.value;

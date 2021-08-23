@@ -191,7 +191,7 @@ contract StreamDelegate is
         require(amount.div(period) > 0, "amount too little");
 
         // each session need deposit some WASP for collateral
-        uint collateralAmount = takeCollateral(token, amount, period);
+        uint collateralAmount = takeCollateral(user, token, amount, period);
 
         update(user);
         
@@ -218,7 +218,7 @@ contract StreamDelegate is
         emit StartStream(user, to, _token, amount, period);
     }
 
-    function takeCollateral(address _token, uint256 amount, uint expired) internal returns(uint) {
+    function takeCollateral(address user, address /*_token*/, uint256 /*amount*/, uint /*period*/) internal returns(uint) {
         // get price
         // 1% collateral
         // TODO: 
