@@ -48,17 +48,10 @@ contract StreamDelegate is
         wwan = _wwan;
         wasp = _wasp;
         collateralOracle = _collateralOracle;
-        minCollateral = 100 ether;
-        maxCollateral = 1000 ether;
     }
 
     receive() external payable {
         require(msg.sender == address(wwan), "Only support value from WWAN"); // only accept WAN via fallback from the WWAN contract
-    }
-
-    function configCollateral(uint _min, uint _max) onlyAdmin external {
-        minCollateral = _min;
-        maxCollateral = _max;
     }
 
     function update(address _user) public {

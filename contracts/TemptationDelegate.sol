@@ -4,13 +4,12 @@ pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/Initializable.sol";
+import "./interfaces/IWanSwapRouter02.sol";
 import "./TemptationStorage.sol";
 
-contract TemptationDelegate is
-    Initializable,
-    AccessControl,
-    TemptationStorage
-{
+contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
+    bytes32 public constant OPERATOR_ROLE = keccak256(bytes("OPERATOR_ROLE"));
+
     event Stake(address indexed user, uint256 amount);
 
     event Withdraw(address indexed user, uint256 amount);
@@ -20,4 +19,73 @@ contract TemptationDelegate is
         _;
     }
 
+    modifier onlyOperator() {
+        require(hasRole(OPERATOR_ROLE, msg.sender), "no access");
+        _;
+    }
+
+    function initialize(address _admin, address _router, address _tokenAddressFrom, address _tokenAddressTo, address _stream)
+        external
+        initializer
+    {
+        _setupRole(DEFAULT_ADMIN_ROLE, _admin);
+        router = _router;
+        tokenAddressFrom = _tokenAddressFrom;
+        tokenAddressTo = _tokenAddressTo;
+        stream = _stream;
+    }
+
+    function work() onlyOperator external {
+
+    }
+
+    /**
+     * @dev swap tokens to this address
+     * @param _tokenAddressFrom address of from token
+     * @param _tokenAddressTo address of to token
+     * @param _amount amount of tokens
+     */
+    function _swapTokens(
+        address _tokenAddressFrom,
+        address _tokenAddressTo,
+        uint256 _amount
+    ) internal {
+        _swapTokensTo(
+            _tokenAddressFrom,
+            _tokenAddressTo,
+            _amount,
+            address(this)
+        );
+    }
+
+    /**
+     * @dev swap tokens
+     * @param _tokenAddressFrom address of from token
+     * @param _tokenAddressTo address of to token
+     * @param _amount amount of tokens
+     */
+    function _swapTokensTo(
+        address _tokenAddressFrom,
+        address _tokenAddressTo,
+        uint256 _amount,
+        address _to
+    ) internal {
+        address[] memory path = new address[](3);
+        path[0] = _tokenAddressFrom;
+        // path[1] = IWanSwapRouter02(router).WETH();
+        // path[2] = _tokenAddressTo;
+        path[1] = _tokenAddressTo;
+
+        IERC20(_tokenAddressFrom).approve(router, _amount);
+
+        // make the swap
+        IWanSwapRouter02(router)
+            .swapExactTokensForTokensSupportingFeeOnTransferTokens(
+                _amount,
+                0,
+                path,
+                _to,
+                block.timestamp
+            );
+    }
 }

@@ -11,4 +11,9 @@ import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 contract TemptationStorage {
     using SafeMath for uint256;
 
+    address public router;
+    address public tokenAddressFrom;
+    address public tokenAddressTo;
+    address public stream;
+
 }
