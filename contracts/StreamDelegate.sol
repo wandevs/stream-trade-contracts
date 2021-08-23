@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/Initializable.sol";
 import "./interfaces/IWWAN.sol";
+import "./interfaces/ICollateralOracle.sol";
 import "./StreamStorage.sol";
 
 contract StreamDelegate is
@@ -39,17 +40,25 @@ contract StreamDelegate is
         _;
     }
 
-    function initialize(address _admin, address _wwan, address _wasp)
+    function initialize(address _admin, address _wwan, address _wasp, address _collateralOracle)
         external
         initializer
     {
         _setupRole(DEFAULT_ADMIN_ROLE, _admin);
         wwan = _wwan;
         wasp = _wasp;
+        collateralOracle = _collateralOracle;
+        minCollateral = 100 ether;
+        maxCollateral = 1000 ether;
     }
 
     receive() external payable {
         require(msg.sender == address(wwan), "Only support value from WWAN"); // only accept WAN via fallback from the WWAN contract
+    }
+
+    function configCollateral(uint _min, uint _max) onlyAdmin external {
+        minCollateral = _min;
+        maxCollateral = _max;
     }
 
     function update(address _user) public {
@@ -218,13 +227,10 @@ contract StreamDelegate is
         emit StartStream(user, to, _token, amount, period);
     }
 
-    function takeCollateral(address user, address /*_token*/, uint256 /*amount*/, uint /*period*/) internal returns(uint) {
-        // get price
-        // 1% collateral
-        // TODO: 
-        IERC20(wasp).safeTransferFrom(user, address(this), COLLATERAL_WASP);
-
-        return COLLATERAL_WASP;
+    function takeCollateral(address user, address _token, uint256 amount, uint period) internal returns(uint) {
+        uint collateralAmount = ICollateralOracle(collateralOracle).getCollateral(user, _token, amount, period);
+        IERC20(wasp).safeTransferFrom(user, address(this), collateralAmount);
+        return collateralAmount;
     }
 
     function stopStream(address _token, address to) public {

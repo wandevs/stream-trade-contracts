@@ -47,4 +47,10 @@ contract StreamStorage {
 
     // collateral WASP token
     address public wasp;
+
+    uint public minCollateral;
+
+    uint public maxCollateral;
+
+    address public collateralOracle;
 }

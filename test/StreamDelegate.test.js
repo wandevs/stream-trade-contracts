@@ -1,6 +1,7 @@
 const FakeErc20 = artifacts.require('FakeErc20');
 const StreamDelegate = artifacts.require('StreamDelegate');
 const WwanToken = artifacts.require('WwanToken');
+const CollateralOracle = artifacts.require('CollateralOracle');
 const { time, expectEvent} = require("@openzeppelin/test-helpers");
 
 const assert = require('assert');
@@ -22,8 +23,10 @@ contract("StreamDelegate", accounts => {
 
     let wwan = await WwanToken.new();
 
+    let collateralOracle = await CollateralOracle.new();
+
     delegate = await StreamDelegate.new();
-    await delegate.initialize(accounts[0], wwan.address, wasp.address);
+    await delegate.initialize(accounts[0], wwan.address, wasp.address, collateralOracle.address);
     await token.approve(delegate.address, 0xfffffffffffff, {from: accounts[0]});
     await token.approve(delegate.address, 0xfffffffffffff, {from: accounts[1]});
     await token.approve(delegate.address, 0xfffffffffffff, {from: accounts[2]});
@@ -128,7 +131,7 @@ contract("StreamDelegate", accounts => {
 
   });
 
-  it.only("should success timeout", async () => {
+  it("should success timeout", async () => {
     await start();
     time.increase(3600*10);
     time.increase(3600*10);
