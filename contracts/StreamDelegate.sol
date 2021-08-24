@@ -8,11 +8,13 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/Initializable.sol";
 import "./interfaces/IWWAN.sol";
 import "./interfaces/ICollateralOracle.sol";
+import "./interfaces/IStream.sol";
 import "./StreamStorage.sol";
 
 contract StreamDelegate is
     Initializable,
     AccessControl,
+    IStream,
     StreamStorage
 {
     using SafeERC20 for IERC20;
@@ -102,7 +104,7 @@ contract StreamDelegate is
         }
     }
 
-    function healthCheck(uint sessionId) public view returns(bool) {
+    function healthCheck(uint sessionId) public override view returns(bool) {
         SessionInfo storage sInfo = sessionInfo[sessionId];
         address asset = sInfo.asset;
         if (sInfo.enable) {
@@ -117,7 +119,7 @@ contract StreamDelegate is
         return false;
     }
 
-    function getUserAssets(address _user) public view returns(address[] memory assets, uint[] memory amounts) {
+    function getUserAssets(address _user) public override view returns(address[] memory assets, uint[] memory amounts) {
         uint length = userAssets[_user].length();
         assets = new address[](length);
         amounts = new uint[](length);
@@ -128,7 +130,7 @@ contract StreamDelegate is
         }
     }
 
-    function getUserAssetSessions(address _user, address _token) public view returns(uint[] memory sessionIds) {
+    function getUserAssetSessions(address _user, address _token) public override view returns(uint[] memory sessionIds) {
         address token = _token;
         if (token == address(0)) {
             token = wwan;
@@ -141,7 +143,25 @@ contract StreamDelegate is
         }
     }
 
-    function deposit(address _token, uint256 _amount) public payable {
+    function cleanReceiveSessions(address _token) external override {
+        address token = _token;
+        if (token == address(0)) { // token is wan
+            token = wwan;
+        }
+        address _user = _msgSender();
+        uint length = userAssetSessions[_user][token].length();
+        uint i;
+        uint sessionId;
+        for (i=0; i<length; i++) {
+            sessionId = userAssetSessions[_user][token].at(i);
+            SessionInfo storage si = sessionInfo[i];
+            if (!si.enable && si.receiver == _user) {
+                userAssetSessions[_user][token].remove(sessionId);
+            }
+        }
+    }
+
+    function deposit(address _token, uint256 _amount) public override payable {
         address token = _token;
         uint256 amount = _amount;
         address user = _msgSender();
@@ -158,7 +178,7 @@ contract StreamDelegate is
         emit Deposit(user, token, amount);
     }
 
-    function withdraw(address _token, uint256 amount) public {
+    function withdraw(address _token, uint256 amount) public override {
         address token = _token;
         address user = _msgSender();
         update(user);
@@ -246,7 +266,7 @@ contract StreamDelegate is
         emit StopStream(user, to, _token);
     }
 
-    function transferAsset(address _token, address to, uint amount) public {
+    function transferAsset(address _token, address to, uint amount) public override {
         address asset = _token;
         if (asset == address(0)) { // token is wan
             asset = wwan;
@@ -280,7 +300,7 @@ contract StreamDelegate is
         emit RemoveStream(user, to, _token);
     }
 
-    function pendingAmount(uint sessionId) public view returns (uint) {
+    function pendingAmount(uint sessionId) public override view returns (uint) {
         SessionInfo storage sInfo = sessionInfo[sessionId];
         uint calcTime = block.timestamp;
         if (calcTime >= sInfo.endTime) {
@@ -293,7 +313,7 @@ contract StreamDelegate is
         return 0;
     }
 
-    function getUserRealTimeAsset(address _user, address _token) public view returns (uint) {
+    function getUserRealTimeAsset(address _user, address _token) public override view returns (uint) {
         address asset = _token;
         if (asset == address(0)) { // token is wan
             asset = wwan;
@@ -325,5 +345,10 @@ contract StreamDelegate is
             }
         }
         return amount;
+    }
+
+    function getSessionAddress(uint sessionId) external override view returns (address, address) {
+        SessionInfo storage si = sessionInfo[sessionId];
+        return (si.sender, si.receiver);
     }
 }

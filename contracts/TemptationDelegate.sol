@@ -4,7 +4,9 @@ pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/Initializable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IWanSwapRouter02.sol";
+import "./interfaces/IStream.sol";
 import "./TemptationStorage.sol";
 
 contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
@@ -24,11 +26,15 @@ contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
         _;
     }
 
-    function initialize(address _admin, address _router, address _tokenAddressFrom, address _tokenAddressTo, address _stream)
+    function initialize(address _admin, address _operator, address _router, address _tokenAddressFrom, address _tokenAddressTo, address _stream)
         external
         initializer
     {
         _setupRole(DEFAULT_ADMIN_ROLE, _admin);
+        _setupRole(OPERATOR_ROLE, _operator);
+
+        IERC20(_tokenAddressTo).approve(_stream, uint(-1));
+
         router = _router;
         tokenAddressFrom = _tokenAddressFrom;
         tokenAddressTo = _tokenAddressTo;
@@ -36,7 +42,49 @@ contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
     }
 
     function work() onlyOperator external {
+        uint[] memory sessionIds = IStream(stream).getUserAssetSessions(address(this), tokenAddressFrom);
+        uint i=0;
+        uint sessionId;
+        address sender;
+        uint pendingAmount;
+        address[] memory senderList = new address[](sessionIds.length);
+        uint[] memory senderAmounts = new uint[](sessionIds.length);
+        uint totalAmount;
+        uint beforeBalance;
+        uint afterBalance;
+        uint receivedAmount;
 
+        // get token0
+        for (i=0; i<sessionIds.length; i++) {
+            sessionId = sessionIds[i];
+            (sender,) = IStream(stream).getSessionAddress(sessionId);
+            senderList[i] = sender;
+            pendingAmount = IStream(stream).pendingAmount(sessionId);
+            if (pendingAmount > 0) {
+                beforeBalance = IERC20(tokenAddressFrom).balanceOf(address(this));
+                IStream(stream).withdraw(tokenAddressFrom, pendingAmount);
+                afterBalance = IERC20(tokenAddressFrom).balanceOf(address(this));
+                receivedAmount = afterBalance.sub(beforeBalance);
+                senderAmounts[i] = receivedAmount;
+                totalAmount = totalAmount.add(receivedAmount);
+            }
+        }
+
+        // swap token0 to token1
+        beforeBalance = IERC20(tokenAddressTo).balanceOf(address(this));
+        _swapTokens(tokenAddressFrom, tokenAddressTo, totalAmount);
+        afterBalance = IERC20(tokenAddressTo).balanceOf(address(this));
+        receivedAmount = afterBalance.sub(beforeBalance);
+
+        // send token1 to users
+        IStream(stream).deposit(tokenAddressTo, receivedAmount);
+
+        for (i=0; i<sessionIds.length; i++) {
+            uint amount = senderAmounts[i];
+            IStream(stream).transferAsset(tokenAddressTo, senderList[i], receivedAmount.mul(amount).div(totalAmount));
+        }
+
+        IStream(stream).cleanReceiveSessions(tokenAddressFrom);
     }
 
     /**
