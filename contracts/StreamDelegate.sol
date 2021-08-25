@@ -279,6 +279,7 @@ contract StreamDelegate is
         UserInfo storage ut = userInfo[to][asset];
         uf.amount = uf.amount.sub(amount);
         ut.amount = ut.amount.add(amount);
+        userAssets[to].add(asset);
         emit Transfer(from, to, amount);
     }
 
