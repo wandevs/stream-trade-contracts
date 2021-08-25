@@ -13,7 +13,7 @@ interface IStream {
 
     function deposit(address _token, uint256 _amount) external payable;
 
-    function withdraw(address _token, uint256 amount) external;
+    function withdraw(address _token, uint256 amount, bool autoUnwrap) external;
 
     function transferAsset(address _token, address to, uint amount) external;
 

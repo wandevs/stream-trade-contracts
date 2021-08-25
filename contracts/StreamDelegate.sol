@@ -178,7 +178,7 @@ contract StreamDelegate is
         emit Deposit(user, token, amount);
     }
 
-    function withdraw(address _token, uint256 amount) public override {
+    function withdraw(address _token, uint256 amount, bool autoUnwrap) public override {
         address token = _token;
         address user = _msgSender();
         update(user);
@@ -193,7 +193,7 @@ contract StreamDelegate is
             userAssets[user].remove(token);
         }
         
-        if (token == wwan) {
+        if (token == wwan && autoUnwrap) {
             IWWAN(wwan).withdraw(amount);
             msg.sender.transfer(amount);
         } else {

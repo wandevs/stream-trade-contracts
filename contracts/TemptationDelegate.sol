@@ -62,7 +62,7 @@ contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
             pendingAmount = IStream(stream).pendingAmount(sessionId);
             if (pendingAmount > 0) {
                 beforeBalance = IERC20(tokenAddressFrom).balanceOf(address(this));
-                IStream(stream).withdraw(tokenAddressFrom, pendingAmount);
+                IStream(stream).withdraw(tokenAddressFrom, pendingAmount, false);
                 afterBalance = IERC20(tokenAddressFrom).balanceOf(address(this));
                 receivedAmount = afterBalance.sub(beforeBalance);
                 senderAmounts[i] = receivedAmount;
