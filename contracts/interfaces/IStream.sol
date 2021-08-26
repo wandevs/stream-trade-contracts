@@ -7,6 +7,10 @@ interface IStream {
 
     function getUserAssetSessions(address _user, address _token) external view returns(uint[] memory sessionIds);
 
+    function getUserAssetSessionsCount(address _user, address _token) external view returns(uint);
+
+    function getUserAssetSessionsRange(address _user, address _token, uint start, uint count) external view returns(uint[] memory sessionIds);
+
     function cleanReceiveSessions(address _token) external;
 
     function getUserAssets(address _user) external view returns(address[] memory assets, uint[] memory amounts);

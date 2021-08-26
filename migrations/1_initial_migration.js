@@ -10,7 +10,7 @@ module.exports = async function (deployer) {
     return;
   }
 
-  // await deployer.deploy(StreamDelegate);
+  await deployer.deploy(StreamDelegate);
   await deployer.deploy(TemptationDelegate);
   return;
 

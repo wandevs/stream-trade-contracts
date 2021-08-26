@@ -145,6 +145,28 @@ contract StreamDelegate is
         }
     }
 
+    function getUserAssetSessionsCount(address _user, address _token) external override view returns(uint) {
+        address token = _token;
+        if (token == address(0)) {
+            token = wwan;
+        }
+        return userAssetSessions[_user][token].length();
+    }
+
+    function getUserAssetSessionsRange(address _user, address _token, uint start, uint count) external override view returns(uint[] memory sessionIds) {
+        address token = _token;
+        if (token == address(0)) {
+            token = wwan;
+        }
+        uint length = userAssetSessions[_user][token].length();
+        require((start + count) <= length, "out of range");
+        sessionIds = new uint[](count);
+        uint i;
+        for (i=0; i<count; i++) {
+            sessionIds[i] = userAssetSessions[_user][token].at(start + i);
+        }
+    }
+
     function cleanReceiveSessions(address _token) external override {
         address token = _token;
         if (token == address(0)) { // token is wan
