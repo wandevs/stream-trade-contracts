@@ -59,15 +59,10 @@ contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
         uint beforeBalance;
         uint afterBalance;
         uint receivedAmount;
-        bool health;
 
         // get token0
         for (i=0; i<length; i++) {
             sessionId = sessionIds[i];
-            health = IStream(stream).healthCheck(sessionId);
-            if (!health) {
-                continue;
-            }
             (sender,) = IStream(stream).getSessionAddress(sessionId);
             senderList[i] = sender;
             beforeBalance = IERC20(tokenAddressFrom).balanceOf(address(this));
