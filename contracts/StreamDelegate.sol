@@ -56,53 +56,58 @@ contract StreamDelegate is
         require(msg.sender == address(wwan), "Only support value from WWAN"); // only accept WAN via fallback from the WWAN contract
     }
 
-    function update(address _user) public {
-        uint assetLength = userAssets[_user].length();
+    function updateAssetReceive(address _user, address asset) internal {
         uint sessionCount;
-        address asset;
         uint sessionId;
-        uint i;
         uint m;
         uint pending;
+
+        sessionCount = userAssetSessions[_user][asset].length();
+        for (m=0; m<sessionCount; m++) {
+            sessionId = userAssetSessions[_user][asset].at(m);
+            SessionInfo storage sInfo = sessionInfo[sessionId];
+            if (sInfo.receiver == _user) {
+                require(sInfo.asset == asset, "session asset not correct");
+                UserInfo storage senderInfo = userInfo[sInfo.sender][asset];
+                UserInfo storage receiverInfo = userInfo[sInfo.receiver][asset];
+                pending = pendingAmount(sessionId);
+                if (senderInfo.amount >= pending) {
+                    senderInfo.amount = senderInfo.amount.sub(pending);
+                    if (block.timestamp >= sInfo.endTime) {
+                        // end time arrive
+                        sInfo.enable = false;
+                        emit TimeOut(sInfo.sender, sInfo.receiver, sessionId);
+                    }
+                } else {
+                    pending = senderInfo.amount;
+                    senderInfo.amount = 0;
+                    // run out of balance, Confiscate collateral
+                    sInfo.dead = true;
+                    sInfo.enable = false;
+                    burnWasp(sInfo.collateralAmount);
+                    delete sInfo.collateralAmount;
+                    delete sInfo.collateralAsset;
+                    emit DepositExhausted(sInfo.sender, sInfo.asset, sessionId);
+                }
+                sInfo.paid = sInfo.paid.add(pending);
+                receiverInfo.amount = receiverInfo.amount.add(pending);
+                uint updateTime = block.timestamp;
+                if (updateTime >= sInfo.endTime) {
+                    updateTime = sInfo.endTime;
+                }
+                sInfo.updateTime = updateTime;
+            }
+        }
+    }
+
+    function updateReceive(address _user) internal {
+        uint assetLength = userAssets[_user].length();
+        address asset;
+        uint i;
         
         for (i=0; i<assetLength; i++) {
             asset = userAssets[_user].at(i);
-            sessionCount = userAssetSessions[_user][asset].length();
-            for (m=0; m<sessionCount; m++) {
-                sessionId = userAssetSessions[_user][asset].at(m);
-                SessionInfo storage sInfo = sessionInfo[sessionId];
-                if (sInfo.enable) {
-                    require(sInfo.asset == asset, "session asset not correct");
-                    UserInfo storage senderInfo = userInfo[sInfo.sender][asset];
-                    UserInfo storage receiverInfo = userInfo[sInfo.receiver][asset];
-                    pending = pendingAmount(sessionId);
-                    if (senderInfo.amount >= pending) {
-                        senderInfo.amount = senderInfo.amount.sub(pending);
-                        if (block.timestamp >= sInfo.endTime) {
-                            // end time arrive
-                            sInfo.enable = false;
-                            emit TimeOut(sInfo.sender, sInfo.receiver, sessionId);
-                        }
-                    } else {
-                        pending = senderInfo.amount;
-                        senderInfo.amount = 0;
-                        // run out of balance, Confiscate collateral
-                        sInfo.dead = true;
-                        sInfo.enable = false;
-                        burnWasp(sInfo.collateralAmount);
-                        delete sInfo.collateralAmount;
-                        delete sInfo.collateralAsset;
-                        emit DepositExhausted(sInfo.sender, sInfo.asset, sessionId);
-                    }
-                    sInfo.paid = sInfo.paid.add(pending);
-                    receiverInfo.amount = receiverInfo.amount.add(pending);
-                    uint updateTime = block.timestamp;
-                    if (updateTime >= sInfo.endTime) {
-                        updateTime = sInfo.endTime;
-                    }
-                    sInfo.updateTime = updateTime;
-                }
-            }
+            updateAssetReceive(_user, asset);
         }
     }
 
@@ -196,7 +201,7 @@ contract StreamDelegate is
         } else {
             IERC20(token).safeTransferFrom(user, address(this), amount);
         }
-        update(user);
+        updateReceive(user);
         userAssets[user].add(token);
         userInfo[user][token].amount = userInfo[user][token].amount.add(amount);
         emit Deposit(user, token, amount);
@@ -205,12 +210,12 @@ contract StreamDelegate is
     function withdraw(address _token, uint256 amount, bool autoUnwrap) public override {
         address token = _token;
         address user = _msgSender();
-        update(user);
+        updateReceive(user);
         if (token == address(0)) { // token is wan
             token = wwan;
         }
-        uint currentAmount = userInfo[user][token].amount;
-        require(amount <= currentAmount, "amount too large");
+        uint realAmount = getUserRealTimeAsset(user, token);
+        require(amount <= realAmount, "amount too large");
         userInfo[user][token].amount = userInfo[user][token].amount.sub(amount);
         
         if (token == wwan && autoUnwrap) {
@@ -229,15 +234,15 @@ contract StreamDelegate is
             token = wwan;
         }
 
-        require(period >= 3600 && period <= (3600*24*365), "expired out of range");
+        require(period >= 600 && period <= (3600*24*365), "expired out of range");
         require(amount.div(period) > 0, "amount too little");
 
         // each session need deposit some WASP for collateral
         uint collateralAmount = takeCollateral(user, token, amount, period);
 
-        update(user);
+        updateReceive(user);
         
-        uint currentAmount = userInfo[user][token].amount;
+        uint currentAmount = getUserRealTimeAsset(user, token);
         require(currentAmount > 0, "deposit not enough");
         uint sessionId = uint(keccak256(abi.encode(user, to, token)));
         SessionInfo storage sInfo = sessionInfo[sessionId];
@@ -261,6 +266,16 @@ contract StreamDelegate is
         emit StartStream(user, to, _token, amount, period);
     }
 
+    function isWorking(address _user, address _token, address to) public view returns(bool) {
+        address token = _token;
+        if (token == address(0)) { // token is wan
+            token = wwan;
+        }
+        uint sessionId = uint(keccak256(abi.encode(_user, to, token)));      
+        SessionInfo storage sInfo = sessionInfo[sessionId];
+        return sInfo.enable;
+    }
+
     function takeCollateral(address user, address _token, uint256 amount, uint period) internal returns(uint) {
         uint collateralAmount = ICollateralOracle(collateralOracle).getCollateral(user, _token, amount, period);
         IERC20(wasp).safeTransferFrom(user, address(this), collateralAmount);
@@ -270,14 +285,13 @@ contract StreamDelegate is
     function stopStream(address _token, address to) public {
         address token = _token;
         address user = _msgSender();
-        update(user);
         if (token == address(0)) { // token is wan
             token = wwan;
         }
         uint sessionId = uint(keccak256(abi.encode(user, to, token)));
         SessionInfo storage sInfo = sessionInfo[sessionId];
         sInfo.enable = false;
-        sInfo.updateTime = block.timestamp;
+        sInfo.endTime = block.timestamp;
         if (!sInfo.dead) {
             IERC20(sInfo.collateralAsset).safeTransfer(user, sInfo.collateralAmount);
             delete sInfo.collateralAmount;
@@ -294,7 +308,7 @@ contract StreamDelegate is
         }
 
         address from = _msgSender();
-        update(from);
+        updateAssetReceive(from, _token);
         UserInfo storage uf = userInfo[from][asset];
         require(amount <= uf.amount, "User asset not enough");
         UserInfo storage ut = userInfo[to][asset];
@@ -305,7 +319,6 @@ contract StreamDelegate is
     }
 
     function removeStream(address user, address _token, address to) public onlyAdmin {
-        update(user);
         address token = _token;
         if (token == address(0)) { // token is wan
             token = wwan;
@@ -324,9 +337,6 @@ contract StreamDelegate is
 
     function pendingAmount(uint sessionId) public override view returns (uint) {
         SessionInfo storage sInfo = sessionInfo[sessionId];
-        if (!sInfo.enable) {
-            return 0;
-        }
 
         uint calcTime = block.timestamp;
         if (calcTime >= sInfo.endTime) {

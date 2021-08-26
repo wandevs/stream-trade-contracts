@@ -10,9 +10,9 @@ module.exports = async function (deployer) {
     return;
   }
 
-  await deployer.deploy(StreamDelegate);
-  await deployer.deploy(TemptationDelegate);
-  return;
+  // await deployer.deploy(StreamDelegate);
+  // await deployer.deploy(TemptationDelegate);
+  // return;
 
   let deployerAddr = deployer.provider.addresses[0];
   console.log('deployerAddr', deployerAddr);
@@ -31,7 +31,6 @@ module.exports = async function (deployer) {
   await deployer.deploy(CollateralOracle);
 
   let oracle = await CollateralOracle.deployed();
-
 
   await deployer.deploy(StreamDelegate);
   await deployer.deploy(TemptationDelegate);
