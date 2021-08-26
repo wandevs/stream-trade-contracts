@@ -22,4 +22,6 @@ interface IStream {
     function getUserRealTimeAsset(address _user, address _token) external view returns (uint);
 
     function getSessionAddress(uint sessionId) external view returns (address, address);
+
+    function claimSession(uint sessionId) external;
 }

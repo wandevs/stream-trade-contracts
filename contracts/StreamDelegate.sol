@@ -76,18 +76,20 @@ contract StreamDelegate is
                     UserInfo storage senderInfo = userInfo[sInfo.sender][asset];
                     UserInfo storage receiverInfo = userInfo[sInfo.receiver][asset];
                     pending = pendingAmount(sessionId);
-                    if (pending == 0) {
-                        // end time arrive
-                        sInfo.enable = false;
-                        emit TimeOut(sInfo.sender, sInfo.receiver, sessionId);
-                    } else if (senderInfo.amount >= pending) {
+                    if (senderInfo.amount >= pending) {
                         senderInfo.amount = senderInfo.amount.sub(pending);
+                        if (block.timestamp >= sInfo.endTime) {
+                            // end time arrive
+                            sInfo.enable = false;
+                            emit TimeOut(sInfo.sender, sInfo.receiver, sessionId);
+                        }
                     } else {
                         pending = senderInfo.amount;
                         senderInfo.amount = 0;
                         // run out of balance, Confiscate collateral
                         sInfo.dead = true;
                         sInfo.enable = false;
+                        burnWasp(sInfo.collateralAmount);
                         delete sInfo.collateralAmount;
                         delete sInfo.collateralAsset;
                         emit DepositExhausted(sInfo.sender, sInfo.asset, sessionId);
@@ -188,10 +190,6 @@ contract StreamDelegate is
         uint currentAmount = userInfo[user][token].amount;
         require(amount <= currentAmount, "amount too large");
         userInfo[user][token].amount = userInfo[user][token].amount.sub(amount);
-
-        if (userInfo[user][token].amount == 0) {
-            userAssets[user].remove(token);
-        }
         
         if (token == wwan && autoUnwrap) {
             IWWAN(wwan).withdraw(amount);
@@ -221,6 +219,7 @@ contract StreamDelegate is
         require(currentAmount > 0, "deposit not enough");
         uint sessionId = uint(keccak256(abi.encode(user, to, token)));
         SessionInfo storage sInfo = sessionInfo[sessionId];
+        require(!sInfo.enable, "exist session");
         sInfo.sender = user;
         sInfo.receiver = to;
         sInfo.asset = token;
@@ -303,6 +302,10 @@ contract StreamDelegate is
 
     function pendingAmount(uint sessionId) public override view returns (uint) {
         SessionInfo storage sInfo = sessionInfo[sessionId];
+        if (!sInfo.enable) {
+            return 0;
+        }
+
         uint calcTime = block.timestamp;
         if (calcTime >= sInfo.endTime) {
             calcTime = sInfo.endTime;
@@ -312,6 +315,46 @@ contract StreamDelegate is
             return sInfo.streamRate.mul(calcTime - sInfo.updateTime);
         }
         return 0;
+    }
+
+    function claimSession(uint sessionId) external override {
+        SessionInfo storage sInfo = sessionInfo[sessionId];
+        require(sInfo.receiver == _msgSender(), "Only available for receiver");
+        address asset = sInfo.asset;
+        uint pending = pendingAmount(sessionId);
+        if (pending > 0) {
+            UserInfo storage senderInfo = userInfo[sInfo.sender][asset];
+            if (senderInfo.amount >= pending) {
+                senderInfo.amount = senderInfo.amount.sub(pending);
+                if (block.timestamp >= sInfo.endTime) {
+                    // end time arrive
+                    sInfo.enable = false;
+                    emit TimeOut(sInfo.sender, sInfo.receiver, sessionId);
+                }
+            } else {
+                pending = senderInfo.amount;
+                senderInfo.amount = 0;
+                // run out of balance, Confiscate collateral
+                sInfo.dead = true;
+                sInfo.enable = false;
+                burnWasp(sInfo.collateralAmount);
+                delete sInfo.collateralAmount;
+                delete sInfo.collateralAsset;
+                emit DepositExhausted(sInfo.sender, sInfo.asset, sessionId);
+            }
+            sInfo.paid = sInfo.paid.add(pending);
+            uint updateTime = block.timestamp;
+            if (updateTime >= sInfo.endTime) {
+                updateTime = sInfo.endTime;
+            }
+            sInfo.updateTime = updateTime;
+            IERC20(asset).safeTransfer(sInfo.receiver, pending);
+        }
+    }
+
+    function burnWasp(uint amount) internal {
+        address burnAddress = address(0x1);
+        IERC20(wasp).transfer(burnAddress, amount);
     }
 
     function getUserRealTimeAsset(address _user, address _token) public override view returns (uint) {

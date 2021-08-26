@@ -1,25 +1,64 @@
-const Migrations = artifacts.require("Migrations");
+const CollateralOracle = artifacts.require("CollateralOracle");
+const StreamDelegate = artifacts.require("StreamDelegate");
+const TemptationDelegate = artifacts.require("TemptationDelegate");
 const CommonProxy = artifacts.require("CommonProxy");
-const Layer2BridgeDelegate = artifacts.require("Layer2BridgeDelegate");
 
 module.exports = async function (deployer) {
   // deployer.deploy(Migrations);
-  await deployer.deploy(Layer2BridgeDelegate);
-  let layer2bridge = await Layer2BridgeDelegate.deployed();
-  console.log('layer2bridge', layer2bridge.address);
+  if (deployer.network === 'development' || deployer.network === 'coverage') {
+    console.log('no need migration');
+    return;
+  }
 
-  const proxyAdmin = '0x2AA0175Eb8b0FB818fFF3c518792Cc1a327a1338';
+  // await deployer.deploy(StreamDelegate);
+  await deployer.deploy(TemptationDelegate);
+  return;
 
-  // TOKEN MANAGER
-  const admin = '0xd2f76C4B824A9311F5979C512a47C0acA5Eb8Ad9';
+  let deployerAddr = deployer.provider.addresses[0];
+  console.log('deployerAddr', deployerAddr);
+  //TODO: TESTNET CONFIG----------
+  let proxyAdmin = '0x5560aF0F46D00FCeA88627a9DF7A4798b1b10961';
+  let admin = '0x4Cf0A877E906DEaD748A41aE7DA8c220E4247D9e';
+  let wwan = '0x916283cc60fdaf05069796466af164876e35d21f';
+  let wasp = '0x830053DABd78b4ef0aB0FeC936f8a1135B68da6f';
+  let router = '0xeA300406FE2eED9CD2bF5c47D01BECa8Ad294Ec1';
+  //--------------------
+  //TODO: MAINNET CONFIG----------
+  // let proxyAdmin = '0xa206e4858849f70c3d684e854e7C126EF7baB32e';
+  // let admin = '0x83f83439Cc3274714A7dad32898d55D17f7C6611';
+  //--------------------
 
-  // USDT 
-  const tokenAddress = '0xD4B5f10D61916Bd6E0860144a91Ac658dE8a1437'
+  await deployer.deploy(CollateralOracle);
 
-  await deployer.deploy(CommonProxy, layer2bridge.address, proxyAdmin, '0x');
+  let oracle = await CollateralOracle.deployed();
 
-  let proxy = await Layer2BridgeDelegate.at((await CommonProxy.deployed()).address);
-  console.log('proxy', proxy.address);
 
-  await proxy.initialize(admin, tokenAddress);
+  await deployer.deploy(StreamDelegate);
+  await deployer.deploy(TemptationDelegate);
+
+  let streamDelegate = await StreamDelegate.deployed();
+  let temptationDelegate = await TemptationDelegate.deployed();
+
+  await deployer.deploy(CommonProxy, streamDelegate.address, proxyAdmin, '0x');
+  let stream = await StreamDelegate.at((await CommonProxy.deployed()).address);
+
+  await deployer.deploy(CommonProxy, temptationDelegate.address, proxyAdmin, '0x');
+  let temptation = await TemptationDelegate.at((await CommonProxy.deployed()).address);
+  
+  await stream.initialize(deployerAddr, wwan, wasp, oracle.address);
+
+  // address _admin, address _operator, address _router, address _tokenAddressFrom, address _tokenAddressTo, address _stream
+  await temptation.initialize(deployerAddr, admin, router, wwan, '0x0f6be49eB9d86f97dE0EB759c856bFb0db8316f7', stream.address);
+
+  await stream.grantRole('0x00', admin);
+  await temptation.grantRole('0x00', admin);
+
+  if (deployerAddr.toLowerCase() !== admin.toLowerCase()) {
+    console.log('renounceRole:', deployerAddr);
+    await stream.renounceRole('0x00', deployerAddr);
+    await temptation.renounceRole('0x00', deployerAddr);
+  }
+
+  console.log('stream:', stream.address);
+  console.log('temptation:', temptation.address);
 };

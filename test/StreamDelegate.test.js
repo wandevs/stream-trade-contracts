@@ -67,10 +67,10 @@ contract("StreamDelegate", accounts => {
     await delegate.deposit(token.address, 1000000, {from: accounts[0]});
     assert.strictEqual((await token.balanceOf(accounts[0])).toString(), '0', 6);
 
-    await delegate.withdraw(token.address, 500000, {from: accounts[0]});
+    await delegate.withdraw(token.address, 500000, false, {from: accounts[0]});
     assert.strictEqual((await token.balanceOf(accounts[0])).toString(), '500000', 7);
 
-    await delegate.withdraw(token.address, 500000, {from: accounts[0]});
+    await delegate.withdraw(token.address, 500000, false, {from: accounts[0]});
     assert.strictEqual((await token.balanceOf(accounts[0])).toString(), '1000000', 8);
 
   });
@@ -108,7 +108,7 @@ contract("StreamDelegate", accounts => {
     assert.strictEqual((await delegate.getUserRealTimeAsset(accounts[0], token.address)).toString(), '999900', 4);
     assert.strictEqual((await delegate.userInfo(accounts[1], token.address)).toString(), '100', 5);
     assert.strictEqual((await delegate.userInfo(accounts[0], token.address)).toString(), '999900', 6);
-    ret = await delegate.withdraw(token.address, 100, {from: accounts[1]});
+    ret = await delegate.withdraw(token.address, 100, false, {from: accounts[1]});
     console.log('withdraw gasUsed', ret.receipt.gasUsed);
 
     assert.strictEqual((await token.balanceOf(accounts[1])).toString(), '1000100', 7);
@@ -126,7 +126,7 @@ contract("StreamDelegate", accounts => {
     await delegate.transferAsset(token.address, accounts[1], 100000);
     assert.strictEqual((await delegate.getUserRealTimeAsset(accounts[0], token.address)).toString(), '900000', 4.1);
     assert.strictEqual((await delegate.getUserRealTimeAsset(accounts[1], token.address)).toString(), '100000', 4.1);
-    await delegate.withdraw(token.address, 100000, {from: accounts[1]});
+    await delegate.withdraw(token.address, 100000, false, {from: accounts[1]});
     assert.strictEqual((await token.balanceOf(accounts[1])).toString(), '1100000', 6);
 
   });
@@ -136,7 +136,7 @@ contract("StreamDelegate", accounts => {
     time.increase(3600*10);
     time.increase(3600*10);
     assert.strictEqual((await delegate.getUserRealTimeAsset(accounts[1], token.address)).toString(), '36000', 4.1);
-    await delegate.withdraw(token.address, 36000, {from: accounts[1]});
+    await delegate.withdraw(token.address, 36000, false, {from: accounts[1]});
     assert.strictEqual((await token.balanceOf(accounts[1])).toString(), '1036000', 6);
   });
 });

@@ -71,11 +71,9 @@ module.exports = {
     // network_id: 2111,   // This network is yours, in the cloud.
     // production: true    // Treats this network as if it was a public net. (default: false)
     // }
-    arbitrum: {
-      provider: () => new HDWalletProvider(process.env.PK, 'https://rinkeby.arbitrum.io/rpc'),
+    testnet: {
+      provider: () => new HDWalletProvider(process.env.PK, 'http://192.168.1.36:8545'),
       network_id: "*",       // Ropsten's id
-      gas: 5500000,        // Ropsten has a lower block limit than mainnet
-      gasPrice: 1e9,
       // confirmations: 2,    // # of confs to wait between deployments. (default: 0)
       // timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
       skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
