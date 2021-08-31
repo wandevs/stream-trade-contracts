@@ -21,6 +21,8 @@ module.exports = async function (deployer) {
   let admin = '0x4Cf0A877E906DEaD748A41aE7DA8c220E4247D9e';
   let wwan = '0x916283cc60fdaf05069796466af164876e35d21f';
   let wasp = '0x830053DABd78b4ef0aB0FeC936f8a1135B68da6f';
+  let wand = '0x37e907f611CA55F10D32e3Af7407305Ee93B0A10';
+  let priceOracle = '0x27933A9b0A5c21B838843d7601B6e0b488122AE9';
   let router = '0xeA300406FE2eED9CD2bF5c47D01BECa8Ad294Ec1';
   let operator = '0xc19e6f0b3c8f149c87f727a009e52d25d7c67964';
   //--------------------
@@ -33,11 +35,14 @@ module.exports = async function (deployer) {
 
   let oracle = await CollateralOracle.deployed();
 
+  // address _admin, address _wasp, address _wand, address _oracle
+  await oracle.initialize(admin, wasp, wand, priceOracle);
+
   await deployer.deploy(StreamDelegate);
 
   let stream = await StreamDelegate.deployed();
   
-  await stream.initialize(deployerAddr, wwan, wasp, oracle.address);
+  await stream.initialize(deployerAddr, wwan, oracle.address);
 
   await deployer.deploy(TemptationDelegate);
   let temptation0 = await TemptationDelegate.deployed();

@@ -98,6 +98,14 @@ contract CollateralOracle is ICollateralOracle, Initializable, AccessControl {
         payAmount = usdValue.div(10) + timeValue;
 
         payAmount = payAmount.div(10 ether).mul(10 ether);
+
+        if (payAmount < MIN) {
+            payAmount = MIN;
+        }
+
+        if (payAmount > MAX) {
+            payAmount = MAX;
+        }
         
         return (payToken, payAmount);
     }
