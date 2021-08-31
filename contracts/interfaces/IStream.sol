@@ -2,7 +2,6 @@
 pragma solidity 0.6.12;
 
 interface IStream {
-    //function getCollateral(address user, address _token, uint256 amount, uint period) external view returns(uint);
     function healthCheck(uint sessionId) external view returns(bool);
 
     function getUserAssetSessions(address _user, address _token) external view returns(uint[] memory sessionIds);
@@ -28,4 +27,6 @@ interface IStream {
     function getSessionAddress(uint sessionId) external view returns (address, address);
 
     function claimSession(uint sessionId) external;
+
+    function getCollateral(address _token, uint256 amount, uint period, uint collateralIndex) external view returns(address, uint);
 }

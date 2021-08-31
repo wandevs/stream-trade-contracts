@@ -73,23 +73,21 @@ contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
             totalAmount = totalAmount.add(receivedAmount);
         }
 
-        if (totalAmount == 0) {
-            return;
-        }
+        if (totalAmount > 0) {
+            // swap token0 to token1
+            beforeBalance = IERC20(tokenAddressTo).balanceOf(address(this));
+            _swapTokens(tokenAddressFrom, tokenAddressTo, totalAmount);
+            afterBalance = IERC20(tokenAddressTo).balanceOf(address(this));
+            receivedAmount = afterBalance.sub(beforeBalance);
 
-        // swap token0 to token1
-        beforeBalance = IERC20(tokenAddressTo).balanceOf(address(this));
-        _swapTokens(tokenAddressFrom, tokenAddressTo, totalAmount);
-        afterBalance = IERC20(tokenAddressTo).balanceOf(address(this));
-        receivedAmount = afterBalance.sub(beforeBalance);
+            // send token1 to users
+            IStream(stream).deposit(tokenAddressTo, receivedAmount);
 
-        // send token1 to users
-        IStream(stream).deposit(tokenAddressTo, receivedAmount);
-
-        for (i=0; i<length; i++) {
-            uint amount = senderAmounts[i];
-            if (amount > 0) {
-                IStream(stream).transferAsset(tokenAddressTo, senderList[i], receivedAmount.mul(amount).div(totalAmount));
+            for (i=0; i<length; i++) {
+                uint amount = senderAmounts[i];
+                if (amount > 0) {
+                    IStream(stream).transferAsset(tokenAddressTo, senderList[i], receivedAmount.mul(amount).div(totalAmount));
+                }
             }
         }
 

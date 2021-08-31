@@ -45,8 +45,5 @@ contract StreamStorage {
     // Wrapped WAN token address
     address public wwan;
 
-    // collateral WASP token
-    address public wasp;
-
     address public collateralOracle;
 }
