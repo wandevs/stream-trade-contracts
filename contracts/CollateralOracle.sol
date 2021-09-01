@@ -91,6 +91,11 @@ contract CollateralOracle is ICollateralOracle, Initializable, AccessControl {
         address payToken = tokens.at(collateralIndex);
         uint payAmount = 100 ether;
         string memory symbol = ISymbol(_token).symbol();
+
+        if (keccak256(bytes(symbol)) == keccak256(bytes("WWAN"))) {
+            symbol = "WAN";
+        }
+
         uint price = IOracle(oracle).getValue(stringToBytes32(symbol));
         uint usdValue = amount.mul(price);
         uint timeValue = period * 1e14; // about 10 wasp per day
