@@ -97,7 +97,7 @@ contract CollateralOracle is ICollateralOracle, Initializable, AccessControl {
         }
 
         uint price = IOracle(oracle).getValue(stringToBytes32(symbol));
-        uint usdValue = amount.mul(price);
+        uint usdValue = amount.mul(price).div(1 ether);
         uint timeValue = period * 1e14; // about 10 wasp per day
 
         payAmount = usdValue.div(10) + timeValue;

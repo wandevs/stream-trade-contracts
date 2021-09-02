@@ -72,13 +72,19 @@ module.exports = {
     // production: true    // Treats this network as if it was a public net. (default: false)
     // }
     testnet: {
-      // provider: () => new HDWalletProvider(process.env.PK, 'https://gwan-ssl.wandevs.org:46891'),
-      provider: () => new HDWalletProvider(process.env.PK, 'http://192.168.1.36:8545'),
+      provider: () => new HDWalletProvider(process.env.PK, 'https://gwan-ssl.wandevs.org:46891'),
+      // provider: () => new HDWalletProvider(process.env.PK, 'http://192.168.1.36:8545'),
 
       network_id: "*",       // Ropsten's id
       gasPrice: 1e9,
       // confirmations: 2,    // # of confs to wait between deployments. (default: 0)
       // timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
+      skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
+    },
+    mainnet: {
+      provider: () => new HDWalletProvider(process.env.PK, 'http://54.223.100.92:26891'),
+      network_id: "*",       // Ropsten's id
+      gasPrice: 1e9,
       skipDryRun: true     // Skip dry run before migrations? (default: false for public nets )
     },
   },
