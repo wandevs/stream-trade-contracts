@@ -193,8 +193,8 @@ contract StreamDelegate is
         address _user = _msgSender();
         uint i;
         uint sessionId;
-        for (i = 0; i < count; i++) {
-            sessionId = userAssetSessions[_user][token].at(start + i);
+        for (i = 1; i <= count; i++) {
+            sessionId = userAssetSessions[_user][token].at(start + count - i);
             SessionInfo storage si = sessionInfo[sessionId];
             uint pending = pendingAmount(sessionId);
             

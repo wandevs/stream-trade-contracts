@@ -45,7 +45,7 @@ contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
     }
 
     function work() onlyOperator external {
-        uint count = IStream(stream).getUserAssetSessionsCount(address(this), tokenAddressFrom);
+        uint count = getSessionCount();
         rangeWork(0, count);
     }
 
