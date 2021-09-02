@@ -12,6 +12,8 @@ interface IStream {
 
     function cleanReceiveSessions(address _token) external;
 
+    function cleanReceiveSessionsRange(address _token, uint start, uint count) external;
+
     function getUserAssets(address _user) external view returns(address[] memory assets, uint[] memory amounts);
 
     function deposit(address _token, uint256 _amount) external payable;

@@ -182,10 +182,19 @@ contract StreamDelegate is
         }
         address _user = _msgSender();
         uint length = userAssetSessions[_user][token].length();
+        cleanReceiveSessionsRange(token, 0, length);
+    }
+
+    function cleanReceiveSessionsRange(address _token, uint start, uint count) public override {
+        address token = _token;
+        if (token == address(0)) { // token is wan
+            token = wwan;
+        }
+        address _user = _msgSender();
         uint i;
         uint sessionId;
-        for (i=0; i<length; i++) {
-            sessionId = userAssetSessions[_user][token].at(i);
+        for (i = 0; i < count; i++) {
+            sessionId = userAssetSessions[_user][token].at(start + i);
             SessionInfo storage si = sessionInfo[sessionId];
             uint pending = pendingAmount(sessionId);
             

@@ -45,7 +45,16 @@ contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
     }
 
     function work() onlyOperator external {
-        uint[] memory sessionIds = IStream(stream).getUserAssetSessions(address(this), tokenAddressFrom);
+        uint count = IStream(stream).getUserAssetSessionsCount(address(this), tokenAddressFrom);
+        rangeWork(0, count);
+    }
+
+    function getSessionCount() public view returns (uint) {
+        return IStream(stream).getUserAssetSessionsCount(address(this), tokenAddressFrom);
+    }
+
+    function rangeWork(uint start, uint count) onlyOperator public {
+        uint[] memory sessionIds = IStream(stream).getUserAssetSessionsRange(address(this), tokenAddressFrom, start, count);
         uint length = sessionIds.length;
         if (length == 0) {
             return;
@@ -61,7 +70,7 @@ contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
         uint receivedAmount;
 
         // get token0
-        for (i=0; i<length; i++) {
+        for (i=0; i<count; i++) {
             sessionId = sessionIds[i];
             (sender,) = IStream(stream).getSessionAddress(sessionId);
             senderList[i] = sender;
@@ -91,72 +100,9 @@ contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
             }
         }
 
-        IStream(stream).cleanReceiveSessions(tokenAddressFrom);
+        IStream(stream).cleanReceiveSessionsRange(tokenAddressFrom, start, count);
 
-        emit Exchange(totalAmount, 0, length);
-    }
-
-    function getSessionCount() public view returns (uint) {
-        return IStream(stream).getUserAssetSessionsCount(address(this), tokenAddressFrom);
-    }
-
-    function rangeWork(uint start, uint count) external {
-        uint[] memory sessionIds = IStream(stream).getUserAssetSessionsRange(address(this), tokenAddressFrom, start, count);
-        uint length = sessionIds.length;
-        if (length == 0) {
-            return;
-        }
-        uint i=0;
-        uint sessionId;
-        address sender;
-        address[] memory senderList = new address[](length);
-        uint[] memory senderAmounts = new uint[](length);
-        uint totalAmount;
-        uint beforeBalance;
-        uint afterBalance;
-        uint receivedAmount;
-        bool health;
-
-        // get token0
-        for (i=0; i<count; i++) {
-            sessionId = sessionIds[i];
-            health = IStream(stream).healthCheck(sessionId);
-            if (!health) {
-                continue;
-            }
-            (sender,) = IStream(stream).getSessionAddress(sessionId);
-            senderList[i] = sender;
-            beforeBalance = IERC20(tokenAddressFrom).balanceOf(address(this));
-            IStream(stream).claimSession(sessionId);
-            afterBalance = IERC20(tokenAddressFrom).balanceOf(address(this));
-            receivedAmount = afterBalance.sub(beforeBalance);
-            senderAmounts[i] = receivedAmount;
-            totalAmount = totalAmount.add(receivedAmount);
-        }
-
-        if (totalAmount == 0) {
-            return;
-        }
-
-        // swap token0 to token1
-        beforeBalance = IERC20(tokenAddressTo).balanceOf(address(this));
-        _swapTokens(tokenAddressFrom, tokenAddressTo, totalAmount);
-        afterBalance = IERC20(tokenAddressTo).balanceOf(address(this));
-        receivedAmount = afterBalance.sub(beforeBalance);
-
-        // send token1 to users
-        IStream(stream).deposit(tokenAddressTo, receivedAmount);
-
-        for (i=0; i<length; i++) {
-            uint amount = senderAmounts[i];
-            if (amount > 0) {
-                IStream(stream).transferAsset(tokenAddressTo, senderList[i], receivedAmount.mul(amount).div(totalAmount));
-            }
-        }
-
-        IStream(stream).cleanReceiveSessions(tokenAddressFrom);
-
-        emit Exchange(totalAmount, 0, count);
+        emit Exchange(totalAmount, receivedAmount, count);
     }
 
     /**
