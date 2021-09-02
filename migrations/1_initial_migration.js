@@ -36,8 +36,8 @@ module.exports = async function (deployer) {
   let oracle = await CollateralOracle.deployed();
 
   // address _admin, address _wasp, address _wand, address _oracle
-  await oracle.initialize(admin, wasp, wand, priceOracle);
-  return;
+  // await oracle.initialize(admin, wasp, wand, priceOracle);
+  // return;
 
   await deployer.deploy(StreamDelegate);
 
@@ -57,16 +57,22 @@ module.exports = async function (deployer) {
   let temptation4 = await TemptationDelegate.deployed();
   await deployer.deploy(TemptationDelegate);
   let temptation5 = await TemptationDelegate.deployed();
+  await deployer.deploy(TemptationDelegate);
+  let temptation6 = await TemptationDelegate.deployed();
+  await deployer.deploy(TemptationDelegate);
+  let temptation7 = await TemptationDelegate.deployed();
 
 
+  // address _admin, address _operator, address _router, address _tokenAddressFrom, address _tokenAddressTo, address[] calldata _path, address _stream
+  await temptation0.initialize(deployerAddr, operator, router, wwan, '0x0f6be49eB9d86f97dE0EB759c856bFb0db8316f7', [wwan, '0x0f6be49eB9d86f97dE0EB759c856bFb0db8316f7'], stream.address); // wan->usdt
+  await temptation1.initialize(deployerAddr, operator, router, '0x0f6be49eB9d86f97dE0EB759c856bFb0db8316f7', wwan, ['0x0f6be49eB9d86f97dE0EB759c856bFb0db8316f7', wwan], stream.address); // usdt->wan
+  await temptation2.initialize(deployerAddr, operator, router, wwan, '0x48344649B9611a891987b2Db33fAada3AC1d05eC', [wwan, '0x48344649B9611a891987b2Db33fAada3AC1d05eC'], stream.address); // wan->eth
+  await temptation3.initialize(deployerAddr, operator, router, '0x48344649B9611a891987b2Db33fAada3AC1d05eC', wwan, ['0x48344649B9611a891987b2Db33fAada3AC1d05eC', wwan], stream.address); // eth->wan
+  await temptation4.initialize(deployerAddr, operator, router, '0x3c653971ffc0794CB2fC5DF5D47576BEdCE149B3', '0x48344649B9611a891987b2Db33fAada3AC1d05eC', ['0x3c653971ffc0794CB2fC5DF5D47576BEdCE149B3', '0x48344649B9611a891987b2Db33fAada3AC1d05eC'], stream.address); // btc->eth
+  await temptation5.initialize(deployerAddr, operator, router, '0x48344649B9611a891987b2Db33fAada3AC1d05eC', '0x3c653971ffc0794CB2fC5DF5D47576BEdCE149B3', ['0x48344649B9611a891987b2Db33fAada3AC1d05eC', '0x3c653971ffc0794CB2fC5DF5D47576BEdCE149B3'], stream.address); // eth->btc
+  await temptation6.initialize(deployerAddr, operator, router, wwan, '0x3c653971ffc0794CB2fC5DF5D47576BEdCE149B3', [wwan, '0x48344649B9611a891987b2Db33fAada3AC1d05eC', '0x3c653971ffc0794CB2fC5DF5D47576BEdCE149B3'], stream.address); // wan->eth->btc
+  await temptation7.initialize(deployerAddr, operator, router, '0x3c653971ffc0794CB2fC5DF5D47576BEdCE149B3', wwan, ['0x3c653971ffc0794CB2fC5DF5D47576BEdCE149B3', '0x48344649B9611a891987b2Db33fAada3AC1d05eC', wwan], stream.address); // btc->eth->wan
 
-  // address _admin, address _operator, address _router, address _tokenAddressFrom, address _tokenAddressTo, address _stream
-  await temptation0.initialize(deployerAddr, operator, router, wwan, '0x0f6be49eB9d86f97dE0EB759c856bFb0db8316f7', stream.address); // wan->usdt
-  await temptation1.initialize(deployerAddr, operator, router, '0x0f6be49eB9d86f97dE0EB759c856bFb0db8316f7', wwan, stream.address); // usdt->wan
-  await temptation2.initialize(deployerAddr, operator, router, wwan, '0x48344649B9611a891987b2Db33fAada3AC1d05eC', stream.address); // wan->eth
-  await temptation3.initialize(deployerAddr, operator, router, '0x48344649B9611a891987b2Db33fAada3AC1d05eC', wwan, stream.address); // eth->wan
-  await temptation4.initialize(deployerAddr, operator, router, '0x3c653971ffc0794CB2fC5DF5D47576BEdCE149B3', '0x48344649B9611a891987b2Db33fAada3AC1d05eC', stream.address); // btc->eth
-  await temptation5.initialize(deployerAddr, operator, router, '0x48344649B9611a891987b2Db33fAada3AC1d05eC', '0x3c653971ffc0794CB2fC5DF5D47576BEdCE149B3', stream.address); // eth->btc
 
   await stream.grantRole('0x00', admin);
 
@@ -76,6 +82,8 @@ module.exports = async function (deployer) {
   await temptation3.grantRole('0x00', admin);
   await temptation4.grantRole('0x00', admin);
   await temptation5.grantRole('0x00', admin);
+  await temptation6.grantRole('0x00', admin);
+  await temptation7.grantRole('0x00', admin);
 
   if (deployerAddr.toLowerCase() !== admin.toLowerCase()) {
     console.log('renounceRole:', deployerAddr);
@@ -86,6 +94,8 @@ module.exports = async function (deployer) {
     await temptation3.renounceRole('0x00', deployerAddr);
     await temptation4.renounceRole('0x00', deployerAddr);
     await temptation5.renounceRole('0x00', deployerAddr);
+    await temptation6.renounceRole('0x00', deployerAddr);
+    await temptation7.renounceRole('0x00', deployerAddr);
   }
 
   console.log('stream:', stream.address);
@@ -95,4 +105,6 @@ module.exports = async function (deployer) {
   console.log('temptation 3:', temptation3.address);
   console.log('temptation 4:', temptation4.address);
   console.log('temptation 5:', temptation5.address);
+  console.log('temptation 6:', temptation6.address);
+  console.log('temptation 7:', temptation7.address);
 };

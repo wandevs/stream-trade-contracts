@@ -28,7 +28,7 @@ contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
         _;
     }
 
-    function initialize(address _admin, address _operator, address _router, address _tokenAddressFrom, address _tokenAddressTo, address _stream)
+    function initialize(address _admin, address _operator, address _router, address _tokenAddressFrom, address _tokenAddressTo, address[] calldata _path, address _stream)
         external
         initializer
     {
@@ -42,6 +42,7 @@ contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
         tokenAddressFrom = _tokenAddressFrom;
         tokenAddressTo = _tokenAddressTo;
         stream = _stream;
+        path = _path;
     }
 
     function work() onlyOperator external {
@@ -85,7 +86,7 @@ contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
         if (totalAmount > 0) {
             // swap token0 to token1
             beforeBalance = IERC20(tokenAddressTo).balanceOf(address(this));
-            _swapTokens(tokenAddressFrom, tokenAddressTo, totalAmount);
+            _swapTokensTo(totalAmount, address(this));
             afterBalance = IERC20(tokenAddressTo).balanceOf(address(this));
             receivedAmount = afterBalance.sub(beforeBalance);
 
@@ -105,45 +106,10 @@ contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
         emit Exchange(totalAmount, receivedAmount, count);
     }
 
-    /**
-     * @dev swap tokens to this address
-     * @param _tokenAddressFrom address of from token
-     * @param _tokenAddressTo address of to token
-     * @param _amount amount of tokens
-     */
-    function _swapTokens(
-        address _tokenAddressFrom,
-        address _tokenAddressTo,
-        uint256 _amount
-    ) internal {
-        _swapTokensTo(
-            _tokenAddressFrom,
-            _tokenAddressTo,
-            _amount,
-            address(this)
-        );
-    }
-
-    /**
-     * @dev swap tokens
-     * @param _tokenAddressFrom address of from token
-     * @param _tokenAddressTo address of to token
-     * @param _amount amount of tokens
-     */
     function _swapTokensTo(
-        address _tokenAddressFrom,
-        address _tokenAddressTo,
         uint256 _amount,
         address _to
     ) internal {
-        address[] memory path = new address[](2);
-        path[0] = _tokenAddressFrom;
-        // path[1] = IWanSwapRouter02(router).WETH();
-        // path[2] = _tokenAddressTo;
-        path[1] = _tokenAddressTo;
-
-        IERC20(_tokenAddressFrom).approve(router, _amount);
-
         // make the swap
         IWanSwapRouter02(router)
             .swapExactTokensForTokensSupportingFeeOnTransferTokens(

@@ -15,5 +15,6 @@ contract TemptationStorage {
     address public tokenAddressFrom;
     address public tokenAddressTo;
     address public stream;
+    address[] public path;
 
 }
