@@ -108,7 +108,7 @@ contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
         uint256 _amount,
         address _to
     ) internal {
-        IERC20(_tokenAddressFrom).approve(router, _amount);
+        IERC20(tokenAddressFrom).approve(router, _amount);
         // make the swap
         IWanSwapRouter02(router)
             .swapExactTokensForTokensSupportingFeeOnTransferTokens(
