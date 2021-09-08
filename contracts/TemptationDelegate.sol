@@ -35,9 +35,6 @@ contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
         _setupRole(DEFAULT_ADMIN_ROLE, _admin);
         _setupRole(OPERATOR_ROLE, _operator);
 
-        IERC20(_tokenAddressTo).approve(_stream, uint(-1));
-        IERC20(_tokenAddressFrom).approve(_router, uint(-1));
-
         router = _router;
         tokenAddressFrom = _tokenAddressFrom;
         tokenAddressTo = _tokenAddressTo;
@@ -90,6 +87,7 @@ contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
             afterBalance = IERC20(tokenAddressTo).balanceOf(address(this));
             receivedAmount = afterBalance.sub(beforeBalance);
 
+            IERC20(tokenAddressTo).approve(stream, receivedAmount);
             // send token1 to users
             IStream(stream).deposit(tokenAddressTo, receivedAmount);
 
@@ -110,6 +108,7 @@ contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
         uint256 _amount,
         address _to
     ) internal {
+        IERC20(_tokenAddressFrom).approve(router, _amount);
         // make the swap
         IWanSwapRouter02(router)
             .swapExactTokensForTokensSupportingFeeOnTransferTokens(
