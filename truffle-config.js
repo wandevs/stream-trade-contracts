@@ -72,7 +72,7 @@ module.exports = {
     // production: true    // Treats this network as if it was a public net. (default: false)
     // }
     testnet: {
-      provider: () => new HDWalletProvider(process.env.PK, 'https://gwan-ssl.wandevs.org:46891'),
+      provider: () => new HDWalletProvider(process.env.PK, 'https://gwan-ssl.wandevs.org:56891'),
       // provider: () => new HDWalletProvider(process.env.PK, 'http://192.168.1.36:8545'),
 
       network_id: "*",       // Ropsten's id
