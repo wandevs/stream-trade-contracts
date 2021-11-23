@@ -415,8 +415,11 @@ contract StreamDelegate is
     }
 
     function burnCollateral(address token, uint amount) internal {
-        address burnAddress = address(0x1);
-        IERC20(token).transfer(burnAddress, amount);
+        uint balance = IERC20(token).balanceOf(address(this));
+        if (amount > 0 && token != address(0) && balance >= amount) {
+            address burnAddress = address(0x1);
+            IERC20(token).transfer(burnAddress, amount);
+        }
     }
 
     function getUserRealTimeAsset(address _user, address _token) public override view returns (uint) {
