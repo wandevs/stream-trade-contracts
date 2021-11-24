@@ -2,14 +2,24 @@
 
 pragma solidity 0.6.12;
 
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/IWanSwapRouter02.sol";
 import "./interfaces/IStream.sol";
-import "./TemptationStorage.sol";
 
-contract TemptationDelegate is Initializable, AccessControl, TemptationStorage {
+contract TradeCar is Initializable, AccessControl {
+    using SafeMath for uint256;
+
+    address public router;
+    address public tokenAddressFrom;
+    address public tokenAddressTo;
+    address public stream;
+    address[] public path;
+
     bytes32 public constant OPERATOR_ROLE = keccak256(bytes("OPERATOR_ROLE"));
 
     event Stake(address indexed user, uint256 amount);

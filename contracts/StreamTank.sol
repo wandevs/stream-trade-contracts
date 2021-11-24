@@ -2,6 +2,8 @@
 
 pragma solidity 0.6.12;
 
+import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
@@ -9,15 +11,52 @@ import "@openzeppelin/contracts/proxy/Initializable.sol";
 import "./interfaces/IWWAN.sol";
 import "./interfaces/ICollateralOracle.sol";
 import "./interfaces/IStream.sol";
-import "./StreamStorage.sol";
 
-contract StreamDelegate is
+contract StreamTank is
     Initializable,
     AccessControl,
-    IStream,
-    StreamStorage
+    IStream
 {
     using SafeERC20 for IERC20;
+    using SafeMath for uint256;
+    using EnumerableSet for EnumerableSet.AddressSet;
+    using EnumerableSet for EnumerableSet.UintSet;
+
+    struct UserInfo {
+        uint amount;
+    }
+
+    struct SessionInfo {
+        address sender;
+        address receiver;
+        address asset;
+        uint startTime;
+        uint endTime;
+        uint updateTime;
+        uint streamRate;
+        uint paid;
+        uint collateralAmount;
+        address collateralAsset;
+        bool enable;
+        bool dead;
+    }
+
+    // user => assets
+    mapping(address => EnumerableSet.AddressSet) userAssets;
+
+    // user => asset => UserInfo
+    mapping(address => mapping(address => UserInfo)) public userInfo;
+
+    // user => asset => sessionId list
+    mapping(address => mapping(address => EnumerableSet.UintSet)) userAssetSessions;
+
+    // sessionId => sessionInfo
+    mapping(uint => SessionInfo) public sessionInfo;
+
+    // Wrapped WAN token address
+    address public wwan;
+
+    address public collateralOracle;
 
     event Deposit(address indexed user, address indexed token, uint amount);
 
