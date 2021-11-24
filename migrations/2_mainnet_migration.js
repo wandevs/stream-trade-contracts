@@ -187,6 +187,6 @@ module.exports = async function (deployer) {
   console.log('StreamTank:', stream.address);
   console.log('CollateralOracle:', oracle.address);
   for (let i=0; i<carCount; i++) {
-    console.log('TradeCar', i, temptation0.address);
+    console.log('TradeCar', i, supportPairs[i].from, '->', supportPairs[i].to, cars[i].address);
   }
 };
