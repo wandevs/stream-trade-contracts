@@ -442,6 +442,8 @@ contract StreamDelegate is
             if (_user == sInfo.sender) {
                 if (amount >= pending) {
                     amount = amount.sub(pending);
+                } else {
+                    amount = 0;
                 }
             } else {
                 UserInfo storage senderInfo = userInfo[sInfo.sender][asset];
