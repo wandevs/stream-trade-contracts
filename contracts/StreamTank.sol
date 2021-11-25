@@ -319,6 +319,7 @@ contract StreamTank is
         sInfo.endTime = block.timestamp + period;
         sInfo.streamRate = amount.div(period);
         sInfo.enable = true;
+        sInfo.dead = false;
         //collateral 
         sInfo.collateralAsset = collateralToken;
         sInfo.collateralAmount = collateralAmount;
