@@ -126,6 +126,7 @@ contract StreamTank is
                     // run out of balance, Confiscate collateral
                     sInfo.dead = true;
                     sInfo.enable = false;
+                    sInfo.endTime = block.timestamp;
                     burnCollateral(sInfo.collateralAsset, sInfo.collateralAmount);
                     delete sInfo.collateralAmount;
                     delete sInfo.collateralAsset;
@@ -438,6 +439,7 @@ contract StreamTank is
                 // run out of balance, Confiscate collateral
                 sInfo.dead = true;
                 sInfo.enable = false;
+                sInfo.endTime = block.timestamp;
                 burnCollateral(sInfo.collateralAsset, sInfo.collateralAmount);
                 delete sInfo.collateralAmount;
                 delete sInfo.collateralAsset;
