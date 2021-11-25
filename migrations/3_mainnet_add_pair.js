@@ -16,17 +16,21 @@ const tokens = {
 }
 
 const supportPairs = [
-  {
-    from: 'ZOO',
-    to: 'wanUSDT',
-    path: ['ZOO','WASP','WWAN','wanUSDT'],
-  },
-  {
-    from: 'wanUSDT',
-    to: 'ZOO',
-    path: ['wanUSDT','WWAN','WASP','ZOO'],
-  },
-
+  // {
+  //   from: 'ZOO',
+  //   to: 'wanUSDT',
+  //   path: ['ZOO','WASP','WWAN','wanUSDT'],
+  // },
+  // {
+  //   from: 'wanUSDT',
+  //   to: 'ZOO',
+  //   path: ['wanUSDT','WWAN','WASP','ZOO'],
+  // },
+  // {
+  //   from: 'WWAN',
+  //   to: 'ZOO',
+  //   path: ['WWAN','WASP','ZOO'],
+  // },
 ];
 
 module.exports = async function (deployer) {
@@ -36,7 +40,7 @@ module.exports = async function (deployer) {
     return;
   }
 
-  // return;
+  return;
 
   let deployerAddr = deployer.provider.addresses[0];
   console.log('deployerAddr', deployerAddr);

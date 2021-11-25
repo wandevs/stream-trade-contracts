@@ -28,21 +28,16 @@ contract TradeCar is Initializable, AccessControl {
 
     event Exchange(uint fromAmount, uint toAmount, uint sessionCount);
 
-    modifier onlyAdmin() {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "no access");
-        _;
-    }
-
     modifier onlyOperator() {
         require(hasRole(OPERATOR_ROLE, msg.sender), "no access");
         _;
     }
 
-    function initialize(address _admin, address _operator, address _router, address _tokenAddressFrom, address _tokenAddressTo, address[] calldata _path, address _stream)
+    function initialize(address _operator, address _router, address _tokenAddressFrom, address _tokenAddressTo, address[] calldata _path, address _stream)
         external
         initializer
     {
-        _setupRole(DEFAULT_ADMIN_ROLE, _admin);
+        _setupRole(DEFAULT_ADMIN_ROLE, _operator);
         _setupRole(OPERATOR_ROLE, _operator);
 
         router = _router;

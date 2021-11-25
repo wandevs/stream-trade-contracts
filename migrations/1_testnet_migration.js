@@ -3,18 +3,12 @@ const StreamTank = artifacts.require("StreamTank");
 const TradeCar = artifacts.require("TradeCar");
 
 const tokens = {
-  WWAN: '0xdabD997aE5E4799BE47d6E69D9431615CBa28f48',
-  WASP: '0x8B9F9f4aA70B1B0d586BE8aDFb19c1Ac38e05E9a',
-  WAND: '0x230f0C01b8e2c027459781E6a56dA7e1876EFDbe',
-  wanUSDT: '0x11e77E27Af5539872efEd10abaA0b408cfd9fBBD',
-  ZOO: '0x6e11655d6aB3781C6613db8CB1Bc3deE9a7e111F',
-  wanLTC: '0xd8e7bd03920BA407D764789B11DD2B5EAeE0961e',
-  wanXRP: '0xf665E0e3E75D16466345E1129530ec28839EfaEa',
-  wanBTC: '0x50c439B6d602297252505a6799d84eA5928bCFb6',
-  wanETH: '0xE3aE74D1518A76715aB4C7BeDF1af73893cd435A',
-  wanUSDC: '0x52A9CEA01c4CBDd669883e41758B8eB8e8E2B34b',
-  wanDOGE: '0xD3a33C6fEa7F785DdC0915f6A76919C11AbdED45',
-  wanDOT: '0x52f44783BdF480e88C0eD4cF341A933CAcfDBcaa',
+  WWAN: '0x916283cc60fdaf05069796466af164876e35d21f',
+  WASP: '0x830053DABd78b4ef0aB0FeC936f8a1135B68da6f',
+  WAND: '0x37e907f611CA55F10D32e3Af7407305Ee93B0A10',
+  wanUSDT: '0x0f6be49eB9d86f97dE0EB759c856bFb0db8316f7',
+  wanBTC: '0x3c653971ffc0794CB2fC5DF5D47576BEdCE149B3',
+  wanETH: '0x48344649B9611a891987b2Db33fAada3AC1d05eC',
 }
 
 const supportPairs = [
@@ -29,109 +23,39 @@ const supportPairs = [
     path: ['wanUSDT','WWAN'],
   },
   {
-    from: 'ZOO',
-    to: 'wanUSDT',
-    path: ['ZOO','WASP','wanUSDT'],
-  },
-  {
-    from: 'WASP',
-    to: 'wanUSDT',
-    path: ['WASP','WWAN','wanUSDT'],
-  },
-  {
-    from: 'ZOO',
-    to: 'wanLTC',
-    path: ['ZOO','WASP','wanLTC'],
-  },
-  {
-    from: 'ZOO',
-    to: 'wanXRP',
-    path: ['ZOO','WASP','WWAN','wanXRP'],
-  },
-  {
-    from: 'WASP',
-    to: 'WWAN',
-    path: ['WWAN','wanUSDT'],
-  },
-  {
-    from: 'wanXRP',
-    to: 'WWAN',
-    path: ['wanXRP','WWAN'],
-  },
-  {
     from: 'WWAN',
-    to: 'wanXRP',
-    path: ['WWAN','wanXRP'],
-  },
-  {
-    from: 'WASP',
-    to: 'ZOO',
-    path: ['WASP','ZOO'],
-  },
-  {
-    from: 'WWAN',
-    to: 'WAND',
-    path: ['WWAN','WASP','WAND'],
-  },
-  {
-    from: 'wanBTC',
-    to: 'WAND',
-    path: ['wanBTC','WWAN','WASP','WAND'],
+    to: 'wanETH',
+    path: ['WWAN','wanETH'],
   },
   {
     from: 'wanETH',
-    to: 'WAND',
-    path: ['wanETH','WWAN','WASP','WAND'],
+    to: 'WWAN',
+    path: ['wanETH','WWAN'],
   },
   {
-    from: 'wanUSDC',
-    to: 'WAND',
-    path: ['wanUSDC','wanUSDT','WWAN','WASP','WAND'],
+    from: 'wanBTC',
+    to: 'wanETH',
+    path: ['wanBTC','wanETH'],
   },
   {
-    from: 'WASP',
-    to: 'WAND',
-    path: ['WASP','WAND'],
-  },
-  {
-    from: 'wanXRP',
-    to: 'WAND',
-    path: ['wanXRP','WWAN','WASP','WAND'],
-  },
-  {
-    from: 'ZOO',
-    to: 'WAND',
-    path: ['ZOO','WASP','WAND'],
-  },
-  {
-    from: 'wanLTC',
-    to: 'WAND',
-    path: ['wanLTC','WASP','WAND'],
-  },
-  {
-    from: 'wanDOGE',
-    to: 'WAND',
-    path: ['wanDOGE','WASP','WAND'],
-  },
-  {
-    from: 'wanDOT',
-    to: 'WAND',
-    path: ['wanDOT','WASP','WAND'],
-  },
-  {
-    from: 'ZOO',
-    to: 'wanUSDT',
-    path: ['ZOO','WASP','WWAN','wanUSDT'],
-  },
-  {
-    from: 'wanUSDT',
-    to: 'ZOO',
-    path: ['wanUSDT','WWAN','WASP','ZOO'],
+    from: 'wanETH',
+    to: 'wanBTC',
+    path: ['wanETH','wanBTC'],
   },
   {
     from: 'WWAN',
-    to: 'ZOO',
-    path: ['WWAN','WASP','ZOO'],
+    to: 'wanBTC',
+    path: ['WWAN','wanETH','wanBTC'],
+  },
+  {
+    from: 'wanBTC',
+    to: 'WWAN',
+    path: ['wanBTC','wanETH','WWAN'],
+  },
+  {
+    from: 'WWAN',
+    to: 'WASP',
+    path: ['WWAN','WASP'],
   },
 ];
 
@@ -142,14 +66,14 @@ module.exports = async function (deployer) {
     return;
   }
 
-  return;
+  // return;
 
   let deployerAddr = deployer.provider.addresses[0];
   console.log('deployerAddr', deployerAddr);
 
   let admin = '0x0C2c190EA95484BAe41D4A26607cB59565f53e4a';
 
-  let priceOracle = '0xa2b6CFAE041371A30bED5f2092393f03D6dCDEEc';
+  let priceOracle = '0x27933a9b0a5c21b838843d7601b6e0b488122ae9';
   let router = '0xeA300406FE2eED9CD2bF5c47D01BECa8Ad294Ec1';
   let operator = '0xc19e6f0b3c8f149c87f727a009e52d25d7c67964';
 
