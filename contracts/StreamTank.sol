@@ -457,10 +457,12 @@ contract StreamTank is
     }
 
     function burnCollateral(address token, uint amount) internal {
-        uint balance = IERC20(token).balanceOf(address(this));
-        if (amount > 0 && token != address(0) && balance >= amount) {
-            address burnAddress = address(0x1);
-            IERC20(token).transfer(burnAddress, amount);
+        if (amount > 0 && token != address(0)) {
+            uint balance = IERC20(token).balanceOf(address(this));
+            if (balance >= amount) {
+                address burnAddress = address(0x1);
+                IERC20(token).transfer(burnAddress, amount);
+            }
         }
     }
 

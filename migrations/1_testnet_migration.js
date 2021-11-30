@@ -66,7 +66,7 @@ module.exports = async function (deployer) {
     return;
   }
 
-  // return;
+  return;
 
   let deployerAddr = deployer.provider.addresses[0];
   console.log('deployerAddr', deployerAddr);
