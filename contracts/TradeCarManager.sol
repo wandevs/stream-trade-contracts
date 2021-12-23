@@ -35,12 +35,12 @@ contract TradeCarManager is Initializable, AccessControl {
         streamTank = _stream;
     }
 
-    function addCar(address _car, string calldata _name, address _fromToken, address _toToken, address _tradeAddress) external onlyAdmin {
+    function addCar(address _car, string calldata _name, address _fromToken, address _toToken) external onlyAdmin {
         cars.add(_car);
         carInfo[_car].name = _name;
         carInfo[_car].fromToken = _fromToken;
         carInfo[_car].toToken = _toToken;
-        carInfo[_car].tradeAddress = _tradeAddress;
+        carInfo[_car].tradeAddress = _car;
     }
 
     function removeCar(address _car) external onlyAdmin {

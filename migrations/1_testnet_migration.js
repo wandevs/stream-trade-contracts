@@ -1,6 +1,7 @@
 const CollateralOracle = artifacts.require("CollateralOracle");
 const StreamTank = artifacts.require("StreamTank");
 const TradeCar = artifacts.require("TradeCar");
+const TradeCarManager = artifacts.require("TradeCarManager");
 
 const tokens = {
   WWAN: '0x916283cc60fdaf05069796466af164876e35d21f',
@@ -66,12 +67,12 @@ module.exports = async function (deployer) {
     return;
   }
 
-  return;
+  // return;
 
   let deployerAddr = deployer.provider.addresses[0];
   console.log('deployerAddr', deployerAddr);
 
-  let admin = '0x0C2c190EA95484BAe41D4A26607cB59565f53e4a';
+  let admin = '0x4Cf0A877E906DEaD748A41aE7DA8c220E4247D9e';
 
   let priceOracle = '0x27933a9b0a5c21b838843d7601b6e0b488122ae9';
   let router = '0xeA300406FE2eED9CD2bF5c47D01BECa8Ad294Ec1';
@@ -102,21 +103,42 @@ module.exports = async function (deployer) {
     console.log('car', i, 'initialized')
   }
 
+  await deployer.deploy(TradeCarManager);
+
+  let manager = await TradeCarManager.deployed();
+
+  await manager.initialize(deployerAddr, stream.address);
+
+  for (let i=0; i<carCount; i++) {
+    console.log('add car to manager', i);
+    await manager.addCar(
+      cars[i].address,
+      supportPairs[i].path.join('->'),
+      tokens[supportPairs[i].from],
+      tokens[supportPairs[i].to]);
+  }
+
   // config new admin
   await stream.grantRole('0x00', admin);
+  await manager.grantRole('0x00', admin);
+
 
   // renonce tmp admin
   if (deployerAddr.toLowerCase() !== admin.toLowerCase()) {
     console.log('renounceRole:', deployerAddr);
     await stream.renounceRole('0x00', deployerAddr);
+    await manager.renounceRole('0x00', deployerAddr);
   }
 
   console.log('StreamTank:', stream.address);
   console.log('CollateralOracle:', oracle.address);
+  console.log('TradeCarManager:', manager.address);
+
   let configJson = [];
+  
   for (let i=0; i<carCount; i++) {
     configJson.push({
-      name: supportPairs[i].from + '->' + supportPairs[i].to,
+      name: supportPairs[i].path.join('->'),
       fromToken: tokens[supportPairs[i].from],
       toToken: tokens[supportPairs[i].to],
       tradeAddress: cars[i].address,
