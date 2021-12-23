@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "./interfaces/IWanSwapRouter02.sol";
 import "./interfaces/IStream.sol";
 
@@ -22,6 +21,7 @@ contract TradeCar is Initializable, AccessControl {
     address public stream;
     address[] public path;
 
+    // user => historyIds
     mapping(address => EnumerableSet.UintSet) private userHistory;
 
     struct HistoryInfo {
@@ -32,6 +32,7 @@ contract TradeCar is Initializable, AccessControl {
         uint startTime;
     }
 
+    // historyId => historyInfo
     mapping(uint => HistoryInfo) public historyInfo;
 
     bytes32 public constant OPERATOR_ROLE = keccak256(bytes("OPERATOR_ROLE"));
