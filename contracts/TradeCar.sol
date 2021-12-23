@@ -176,14 +176,14 @@ contract TradeCar is Initializable, AccessControl {
             info.buyToken = _buyToken;
         }
 
-        info.sellAmount = _sellAmount;
+        info.sellAmount += _sellAmount;
     }
 
     function saveBuyHistory(address _user, uint _startTime, uint _sessionId, uint _buyAmount) private {
         uint historyId = uint(keccak256(abi.encode(_sessionId, _startTime)));
         userHistory[_user].add(historyId);
         HistoryInfo storage info = historyInfo[historyId];
-        info.buyAmount = _buyAmount;
+        info.buyAmount += _buyAmount;
     }
 
 }
