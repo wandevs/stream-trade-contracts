@@ -46,7 +46,7 @@ contract CollateralOracle is ICollateralOracle, Initializable, AccessControl {
         tokens.add(_wand);
         oracle = _oracle;
         MAX = 1000 ether;
-        MIN = 100 ether;
+        MIN = 10 ether;
     }
 
     function addToken(address _token) public onlyAdmin {
@@ -87,30 +87,36 @@ contract CollateralOracle is ICollateralOracle, Initializable, AccessControl {
         }
     }
 
-    function getCollateral(address _token, uint256 amount, uint period, uint collateralIndex) override external view returns(address, uint) {
+    function getCollateral(address _token, uint256 amount, uint /*period*/, uint collateralIndex) override external view returns(address, uint) {
         address payToken = tokens.at(collateralIndex);
         uint payAmount = 100 ether;
+
         string memory symbol = ISymbol(_token).symbol();
+        uint256 decimals = ISymbol(_token).decimals();
 
         if (keccak256(bytes(symbol)) == keccak256(bytes("WWAN"))) {
             symbol = "WAN";
         }
 
+        string memory paySymbol = ISymbol(payToken).symbol();
+
         uint price = IOracle(oracle).getValue(stringToBytes32(symbol));
-        uint usdValue = amount.mul(price).div(1 ether);
-        uint timeValue = period * 1e14; // about 10 wasp per day
 
-        payAmount = usdValue.div(10) + timeValue;
+        uint payPrice = IOracle(oracle).getValue(stringToBytes32(paySymbol));
 
-        payAmount = payAmount.div(10 ether).mul(10 ether);
+        uint usdValue = amount * price / (10 ** decimals);
 
-        if (payAmount < MIN) {
-            payAmount = MIN;
+        payAmount = usdValue / 100 * 1e18 / payPrice;
+
+        if (payAmount < MIN.mul(1 ether).div(payPrice)) {
+            payAmount = MIN.mul(1 ether).div(payPrice);
         }
 
-        if (payAmount > MAX) {
-            payAmount = MAX;
+        if (payAmount > MAX.mul(1 ether).div(payPrice)) {
+            payAmount = MAX.mul(1 ether).div(payPrice);
         }
+
+        payAmount = payAmount / 10 ether * 10 ether;
         
         return (payToken, payAmount);
     }

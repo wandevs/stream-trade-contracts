@@ -125,4 +125,9 @@ module.exports = async function (deployer) {
   }
 
   console.log('TradeCars', JSON.stringify(configJson, null, 2));
+
+  console.log('trade addresses:')
+  for (let i=0; i<carCount; i++) {
+    console.log(cars[i].address);
+  }
 };

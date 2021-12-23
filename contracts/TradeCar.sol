@@ -8,17 +8,31 @@ import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/EnumerableSet.sol";
 import "./interfaces/IWanSwapRouter02.sol";
 import "./interfaces/IStream.sol";
 
 contract TradeCar is Initializable, AccessControl {
     using SafeMath for uint256;
+    using EnumerableSet for EnumerableSet.UintSet;
 
     address public router;
     address public tokenAddressFrom;
     address public tokenAddressTo;
     address public stream;
     address[] public path;
+
+    mapping(address => EnumerableSet.UintSet) private userHistory;
+
+    struct HistoryInfo {
+        address sellToken;
+        address buyToken;
+        uint sellAmount;
+        uint buyAmount;
+        uint startTime;
+    }
+
+    mapping(uint => HistoryInfo) public historyInfo;
 
     bytes32 public constant OPERATOR_ROLE = keccak256(bytes("OPERATOR_ROLE"));
 
@@ -62,51 +76,72 @@ contract TradeCar is Initializable, AccessControl {
         if (length == 0) {
             return;
         }
-        uint i=0;
-        uint sessionId;
-        address sender;
-        address[] memory senderList = new address[](length);
-        uint[] memory senderAmounts = new uint[](length);
-        uint totalAmount;
-        uint beforeBalance;
-        uint afterBalance;
-        uint receivedAmount;
+        
+        // for stack too deep
+        {
+            uint i=0;
+            uint sessionId;
+            address sender;
+            address[] memory senderList = new address[](length);
+            uint[] memory senderAmounts = new uint[](length);
+            uint totalAmount;
+            uint beforeBalance;
+            uint afterBalance;
+            uint receivedAmount;
+            uint _startTime;
+            uint _payAmount;
 
-        // get token0
-        for (i=0; i<count; i++) {
-            sessionId = sessionIds[i];
-            (sender,) = IStream(stream).getSessionAddress(sessionId);
-            senderList[i] = sender;
-            beforeBalance = IERC20(tokenAddressFrom).balanceOf(address(this));
-            IStream(stream).claimSession(sessionId);
-            afterBalance = IERC20(tokenAddressFrom).balanceOf(address(this));
-            receivedAmount = afterBalance.sub(beforeBalance);
-            senderAmounts[i] = receivedAmount;
-            totalAmount = totalAmount.add(receivedAmount);
-        }
+            // get token0
+            for (i=0; i<count; i++) {
+                sessionId = sessionIds[i];
+                (sender,) = IStream(stream).getSessionAddress(sessionId);
+                senderList[i] = sender;
+                beforeBalance = IERC20(tokenAddressFrom).balanceOf(address(this));
+                IStream(stream).claimSession(sessionId);
+                afterBalance = IERC20(tokenAddressFrom).balanceOf(address(this));
+                receivedAmount = afterBalance.sub(beforeBalance);
+                senderAmounts[i] = receivedAmount;
+                totalAmount = totalAmount.add(receivedAmount);
 
-        if (totalAmount > 0) {
-            // swap token0 to token1
-            beforeBalance = IERC20(tokenAddressTo).balanceOf(address(this));
-            _swapTokensTo(totalAmount, address(this));
-            afterBalance = IERC20(tokenAddressTo).balanceOf(address(this));
-            receivedAmount = afterBalance.sub(beforeBalance);
+                _startTime = IStream(stream).getSessionStartTime(sessionId);
+                saveSellHistory(sender, _startTime, sessionId, tokenAddressFrom, tokenAddressTo, receivedAmount);
+            }
 
-            IERC20(tokenAddressTo).approve(stream, receivedAmount);
-            // send token1 to users
-            IStream(stream).deposit(tokenAddressTo, receivedAmount);
+            if (totalAmount > 0) {
+                // swap token0 to token1
+                beforeBalance = IERC20(tokenAddressTo).balanceOf(address(this));
+                _swapTokensTo(totalAmount, address(this));
+                afterBalance = IERC20(tokenAddressTo).balanceOf(address(this));
+                receivedAmount = afterBalance.sub(beforeBalance);
 
-            for (i=0; i<length; i++) {
-                uint amount = senderAmounts[i];
-                if (amount > 0) {
-                    IStream(stream).transferAsset(tokenAddressTo, senderList[i], receivedAmount.mul(amount).div(totalAmount));
+                IERC20(tokenAddressTo).approve(stream, receivedAmount);
+                // send token1 to users
+                IStream(stream).deposit(tokenAddressTo, receivedAmount);
+
+                for (i=0; i<length; i++) {
+                    if (senderAmounts[i] > 0) {
+                        _payAmount = receivedAmount.mul(senderAmounts[i]).div(totalAmount);
+                        IStream(stream).transferAsset(tokenAddressTo, senderList[i], _payAmount);
+                        
+                        _startTime = IStream(stream).getSessionStartTime(sessionIds[i]);
+                        saveBuyHistory(senderList[i], _startTime, sessionIds[i], _payAmount);
+                    }
                 }
             }
         }
-
+        
         IStream(stream).cleanReceiveSessionsRange(tokenAddressFrom, start, count);
+    }
 
-        emit Exchange(totalAmount, receivedAmount, count);
+    function getHistoryCount(address _user) public view returns (uint) {
+        return userHistory[_user].length();
+    }
+
+    function getHistoryIds(address _user, uint _offset, uint _count) public view returns (uint[] memory) {
+        uint[] memory ret = new uint[](_count);
+        for (uint i=0; i<_count; i++) {
+            ret[i] = userHistory[_user].at(_offset + i);
+        }
     }
 
     function _swapTokensTo(
@@ -124,4 +159,31 @@ contract TradeCar is Initializable, AccessControl {
                 block.timestamp
             );
     }
+
+    function saveSellHistory(address _user, uint _startTime, uint _sessionId, address _sellToken, address _buyToken, uint _sellAmount) private {
+        uint historyId = uint(keccak256(abi.encode(_sessionId, _startTime)));
+        userHistory[_user].add(historyId);
+        HistoryInfo storage info = historyInfo[historyId];
+        if (info.startTime == 0) {
+            info.startTime = _startTime;
+        }
+
+        if (info.sellToken == address(0)) {
+            info.sellToken = _sellToken;
+        }
+
+        if (info.buyToken == address(0)) {
+            info.buyToken = _buyToken;
+        }
+
+        info.sellAmount = _sellAmount;
+    }
+
+    function saveBuyHistory(address _user, uint _startTime, uint _sessionId, uint _buyAmount) private {
+        uint historyId = uint(keccak256(abi.encode(_sessionId, _startTime)));
+        userHistory[_user].add(historyId);
+        HistoryInfo storage info = historyInfo[historyId];
+        info.buyAmount = _buyAmount;
+    }
+
 }

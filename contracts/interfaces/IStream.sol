@@ -28,6 +28,8 @@ interface IStream {
 
     function getSessionAddress(uint sessionId) external view returns (address, address);
 
+    function getSessionStartTime(uint sessionId) external view returns (uint);
+
     function claimSession(uint sessionId) external;
 
     function getCollateral(address _token, uint256 amount, uint period, uint collateralIndex) external view returns(address, uint);

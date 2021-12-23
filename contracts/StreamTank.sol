@@ -298,6 +298,7 @@ contract StreamTank is
 
         require(period >= 600 && period <= (3600*24*365), "expired out of range");
         require(amount.div(period) > 0, "amount too little");
+        require(user != to, "From and to need different");
 
         // each session need deposit some WASP for collateral
         uint collateralAmount;
@@ -504,5 +505,10 @@ contract StreamTank is
     function getSessionAddress(uint sessionId) external override view returns (address, address) {
         SessionInfo storage si = sessionInfo[sessionId];
         return (si.sender, si.receiver);
+    }
+
+    function getSessionStartTime(uint sessionId) external override view returns (uint) {
+        SessionInfo storage si = sessionInfo[sessionId];
+        return si.startTime;
     }
 }
