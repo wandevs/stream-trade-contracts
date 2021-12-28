@@ -143,6 +143,7 @@ contract TradeCar is Initializable, AccessControl {
         for (uint i=0; i<_count; i++) {
             ret[i] = userHistory[_user].at(_offset + i);
         }
+        return ret;
     }
 
     function _swapTokensTo(
