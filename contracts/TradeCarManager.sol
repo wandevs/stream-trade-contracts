@@ -59,11 +59,17 @@ contract TradeCarManager is Initializable, AccessControl {
         return _cars;
     }
 
-    function getCarsInfo() external view returns(CarInfo[] memory _carInfos) {
-        _carInfos = new CarInfo[](cars.length());
+    function getCarsInfo() external view returns(string[] memory _name, address[] memory _fromToken, address[] memory _toToken, address[] memory _tradeAddress) {
+        _name = new string[](cars.length());
+        _fromToken = new address[](cars.length());
+        _toToken = new address[](cars.length());
+        _tradeAddress = new address[](cars.length());
         for (uint i=0; i<cars.length(); i++) {
             address car = cars.at(i);
-            _carInfos[i] = carInfo[car];
+            _name[i] = carInfo[car].name;
+            _fromToken[i] = carInfo[car].fromToken;
+            _toToken[i] = carInfo[car].toToken;
+            _tradeAddress[i] = carInfo[car].tradeAddress;
         }
     }
 }
