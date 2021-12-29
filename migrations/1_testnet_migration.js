@@ -67,12 +67,12 @@ module.exports = async function (deployer) {
     return;
   }
 
-  // return;
+  return;
 
   let deployerAddr = deployer.provider.addresses[0];
   console.log('deployerAddr', deployerAddr);
 
-  let admin = '0x4Cf0A877E906DEaD748A41aE7DA8c220E4247D9e';
+  let admin = '0x3E7CfB8b84E64B3Be7AE0458B4642016Bf4e4a75';
 
   let priceOracle = '0x27933a9b0a5c21b838843d7601b6e0b488122ae9';
   let router = '0xeA300406FE2eED9CD2bF5c47D01BECa8Ad294Ec1';

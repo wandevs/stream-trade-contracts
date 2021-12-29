@@ -1,6 +1,7 @@
 const CollateralOracle = artifacts.require("CollateralOracle");
 const StreamTank = artifacts.require("StreamTank");
 const TradeCar = artifacts.require("TradeCar");
+const TradeCarManager = artifacts.require("TradeCarManager");
 
 const tokens = {
   WWAN: '0xdabD997aE5E4799BE47d6E69D9431615CBa28f48',
@@ -128,6 +129,11 @@ const supportPairs = [
     to: 'ZOO',
     path: ['WWAN','WASP','ZOO'],
   },
+  {
+    from: 'WAND',
+    to: 'wanUSDT',
+    path: ['WAND','WASP','WWAN','wanUSDT'],
+  },
 ];
 
 module.exports = async function (deployer) {
@@ -173,21 +179,40 @@ module.exports = async function (deployer) {
     console.log('car', i, 'initialized')
   }
 
+  await deployer.deploy(TradeCarManager);
+
+  let manager = await TradeCarManager.deployed();
+
+  await manager.initialize(deployerAddr, stream.address);
+
+  for (let i=0; i<carCount; i++) {
+    console.log('add car to manager', i);
+    await manager.addCar(
+      cars[i].address,
+      supportPairs[i].path.join('->'),
+      tokens[supportPairs[i].from],
+      tokens[supportPairs[i].to]);
+  }
+
   // config new admin
   await stream.grantRole('0x00', admin);
+  await manager.grantRole('0x00', admin);
 
   // renonce tmp admin
   if (deployerAddr.toLowerCase() !== admin.toLowerCase()) {
     console.log('renounceRole:', deployerAddr);
     await stream.renounceRole('0x00', deployerAddr);
+    await manager.renounceRole('0x00', deployerAddr);
   }
 
   console.log('StreamTank:', stream.address);
   console.log('CollateralOracle:', oracle.address);
+  console.log('TradeCarManager:', manager.address);
+
   let configJson = [];
   for (let i=0; i<carCount; i++) {
     configJson.push({
-      name: supportPairs[i].from + '->' + supportPairs[i].to,
+      name: supportPairs[i].path.join('->'),
       fromToken: tokens[supportPairs[i].from],
       toToken: tokens[supportPairs[i].to],
       tradeAddress: cars[i].address,
