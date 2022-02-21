@@ -52,7 +52,7 @@ const supportPairs = [
   {
     from: 'WASP',
     to: 'WWAN',
-    path: ['WWAN','wanUSDT'],
+    path: ['WASP','WWAN'],
   },
   {
     from: 'wanXRP',
