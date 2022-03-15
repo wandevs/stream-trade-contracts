@@ -102,7 +102,12 @@ contract CollateralOracle is ICollateralOracle, Initializable, AccessControl {
 
         uint price = IOracle(oracle).getValue(stringToBytes32(symbol));
 
+        // MUST HAS ORACLE PRICE
         uint payPrice = IOracle(oracle).getValue(stringToBytes32(paySymbol));
+
+        if (payPrice == 0) {
+            payPrice = 1 ether;
+        }
 
         uint usdValue = amount * price / (10 ** decimals);
 

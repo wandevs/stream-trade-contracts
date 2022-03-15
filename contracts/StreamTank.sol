@@ -132,7 +132,7 @@ contract StreamTank is
                     delete sInfo.collateralAsset;
                     emit DepositExhausted(sInfo.sender, sInfo.asset, sessionId);
                 }
-                sInfo.paid = sInfo.paid.add(pending);
+                sInfo.paid += pending;
                 receiverInfo.amount = receiverInfo.amount.add(pending);
                 uint updateTime = block.timestamp;
                 if (updateTime >= sInfo.endTime) {
@@ -447,7 +447,7 @@ contract StreamTank is
                 delete sInfo.collateralAsset;
                 emit DepositExhausted(sInfo.sender, sInfo.asset, sessionId);
             }
-            sInfo.paid = sInfo.paid.add(pending);
+            sInfo.paid += pending;
             uint updateTime = block.timestamp;
             if (updateTime >= sInfo.endTime) {
                 updateTime = sInfo.endTime;
