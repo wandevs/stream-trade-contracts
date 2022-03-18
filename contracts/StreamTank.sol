@@ -365,9 +365,11 @@ contract StreamTank is
         sInfo.enable = false;
         sInfo.endTime = block.timestamp;
         if (!sInfo.dead && sInfo.collateralAmount > 0) {
-            IERC20(sInfo.collateralAsset).safeTransfer(user, sInfo.collateralAmount);
+            uint _col = sInfo.collateralAmount;
+            uint _asset = sInfo.collateralAsset;
             delete sInfo.collateralAmount;
             delete sInfo.collateralAsset;
+            IERC20(_asset).safeTransfer(user, _col);
         }
 
         emit StopStream(user, to, _token);
