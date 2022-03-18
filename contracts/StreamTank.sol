@@ -401,9 +401,11 @@ contract StreamTank is
         userAssetSessions[user][token].remove(sessionId);
         SessionInfo storage sInfo = sessionInfo[sessionId];
         if (!sInfo.dead && sInfo.collateralAmount > 0) {
-            IERC20(sInfo.collateralAsset).safeTransfer(user, sInfo.collateralAmount);
+            uint _col = sInfo.collateralAmount;
+            address _asset = sInfo.collateralAsset;
             delete sInfo.collateralAmount;
             delete sInfo.collateralAsset;
+            IERC20(_asset).safeTransfer(user, _col);
         }
         delete sessionInfo[sessionId];
         emit RemoveStream(user, to, _token);
