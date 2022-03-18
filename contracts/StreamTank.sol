@@ -241,9 +241,11 @@ contract StreamTank is
             if (!si.enable && si.receiver == _user && pending == 0) {
                 userAssetSessions[_user][token].remove(sessionId);
                 if (!si.dead && si.collateralAmount > 0) {
-                    IERC20(si.collateralAsset).safeTransfer(si.sender, si.collateralAmount);
+                    uint _asset = si.collateralAsset;
+                    uint _amount = si.collateralAmount;
                     delete si.collateralAmount;
                     delete si.collateralAsset;
+                    IERC20(_asset).safeTransfer(si.sender, _amount);
                 }
                 emit CleanReceive(_user, token, sessionId, si.enable, si.receiver == _user, pending, true);
             } else {
