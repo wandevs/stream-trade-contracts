@@ -241,7 +241,7 @@ contract StreamTank is
             if (!si.enable && si.receiver == _user && pending == 0) {
                 userAssetSessions[_user][token].remove(sessionId);
                 if (!si.dead && si.collateralAmount > 0) {
-                    uint _asset = si.collateralAsset;
+                    address _asset = si.collateralAsset;
                     uint _amount = si.collateralAmount;
                     delete si.collateralAmount;
                     delete si.collateralAsset;

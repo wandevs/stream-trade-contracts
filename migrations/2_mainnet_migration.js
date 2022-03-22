@@ -32,7 +32,7 @@ const supportPairs = [
   {
     from: 'ZOO',
     to: 'wanUSDT',
-    path: ['ZOO','WASP','wanUSDT'],
+    path: ['ZOO','WWAN','wanUSDT'],
   },
   {
     from: 'WASP',
@@ -47,7 +47,7 @@ const supportPairs = [
   {
     from: 'ZOO',
     to: 'wanXRP',
-    path: ['ZOO','WASP','WWAN','wanXRP'],
+    path: ['ZOO','WWAN','wanXRP'],
   },
   {
     from: 'WASP',
@@ -90,6 +90,11 @@ const supportPairs = [
     path: ['wanUSDC','wanUSDT','WWAN','WASP','WAND'],
   },
   {
+    from: 'wanUSDT',
+    to: 'WAND',
+    path: ['wanUSDT','WWAN','WASP','WAND'],
+  },
+  {
     from: 'WASP',
     to: 'WAND',
     path: ['WASP','WAND'],
@@ -122,12 +127,12 @@ const supportPairs = [
   {
     from: 'wanUSDT',
     to: 'ZOO',
-    path: ['wanUSDT','WWAN','WASP','ZOO'],
+    path: ['wanUSDT','WWAN','ZOO'],
   },
   {
     from: 'WWAN',
     to: 'ZOO',
-    path: ['WWAN','WASP','ZOO'],
+    path: ['WWAN','ZOO'],
   },
   {
     from: 'WAND',
@@ -148,7 +153,7 @@ module.exports = async function (deployer) {
   let deployerAddr = deployer.provider.addresses[0];
   console.log('deployerAddr', deployerAddr);
 
-  let admin = '0x0C2c190EA95484BAe41D4A26607cB59565f53e4a';
+  let admin = '0x5d47F697b16B337e3B462c59E930905F7B41F665'; // multi-sig wallet
 
   let priceOracle = '0xa2b6CFAE041371A30bED5f2092393f03D6dCDEEc';
   let router = '0xeA300406FE2eED9CD2bF5c47D01BECa8Ad294Ec1';
